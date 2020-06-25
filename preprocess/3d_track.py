@@ -67,20 +67,19 @@ def main():
         [0, 1],
         [1, 2],
         [2, 3],
-        [3, 4],
-        [0, 4],
-        [0, 5],
+        [3, 1],
+        [4, 5],
         [5, 6],
         [6, 7],
-        [7, 8],
-        [8, 9],
-        [3, 9],
-        [2, 8],
-        [1, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [3, 7],
+        [2, 6],
     ]
 
     line_set = o3d.geometry.LineSet()
-    line_set.points = o3d.utility.Vector3dVector(np.random.rand(10, 3).tolist())
+    line_set.points = o3d.utility.Vector3dVector(np.random.rand(8, 3).tolist())
     line_set.lines = o3d.utility.Vector2iVector(lines3d)
 
     vis.add_geometry(pcd)
@@ -196,9 +195,9 @@ def main():
             z_max = np.max(keypoints[:, 2]) + padding / 2
 
             # draw 3d boundingbox
-            x = [x_min, x_max, x_max, x_min, x_min, x_min, x_max, x_max, x_min, x_min]
-            y = [y_max, y_max, y_min, y_min, y_max, y_max, y_max, y_min, y_min, y_max]
-            z = [z_min, z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max, z_max]
+            x = [x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min]
+            y = [y_max, y_max, y_min, y_min, y_max, y_max, y_min, y_min]
+            z = [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]
             mlab.plot3d(x, y, z, color=(0.5, 1, 1), tube_radius=2)
             x = [x_min, x_min]
             y = [y_min, y_min]
