@@ -56,6 +56,11 @@ def main():
     # Initialize Visualizer and start animation callback
     vis = o3d.visualization.Visualizer()
     vis.create_window()
+    
+    # set viewpoint. I want the 0,0,0 viewpoint,maybe need to rotate to camera coord
+    ctr = vis.get_view_control()
+    ctr.change_field_of_view(step=0)
+    
     pcd = o3d.geometry.PointCloud()
     img = cv2.imread(base_path + "76150/" + 'image_D' + '00000000' + '.png', cv2.IMREAD_ANYDEPTH)
     whole_points = depth2pc(img)
