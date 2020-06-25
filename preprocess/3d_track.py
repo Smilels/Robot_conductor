@@ -60,6 +60,8 @@ def main():
     img = cv2.imread(base_path + "76150/" + 'image_D' + '00000000' + '.png', cv2.IMREAD_ANYDEPTH)
     whole_points = depth2pc(img)
     pcd.points = o3d.utility.Vector3dVector(whole_points)
+    pcd_key = o3d.geometry.PointCloud()
+    pcd_key.points = o3d.utility.Vector3dVector(np.random.rand(21, 3))
 
     lines3d = [
         [0, 1],
@@ -77,16 +79,15 @@ def main():
         [1, 7],
     ]
 
-    line_set = o3d.geometry.LineSet(
-        # points=o3d.utility.Vector3dVector([0,0,0]),
-        # lines=o3d.utility.Vector2iVector(lines3d),
-    )
-    colors = [[1, 0, 0] for i in range(len(lines3d))]
-    line_set.colors = o3d.utility.Vector3dVector(colors)
-    vis.add_geometry(line_set)
-    vis.add_geometry(pcd)
+    line_set = o3d.geometry.LineSet()
+    line_set.points = o3d.utility.Vector3dVector(np.random.rand(10, 3).tolist())
+    line_set.lines = o3d.utility.Vector2iVector(lines3d)
 
-    for line in lines[740:]:
+    vis.add_geometry(pcd)
+    vis.add_geometry(pcd_key)
+    vis.add_geometry(line_set)
+
+    for line in lines[10740:]:
         frame = line.split(' ')[0].replace("\t", "")
         label_source = line.split('\t')[1:]
         label = []
@@ -277,46 +278,19 @@ def main():
 
             line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera.tolist())
             line_set.lines = o3d.utility.Vector2iVector(lines3d)
-            colors = [[1, 0, 0] for i in range(len(lines3d))]
+            colors = [[0.5, 0.5, 0] for i in range(len(lines3d))]
             line_set.colors = o3d.utility.Vector3dVector(colors)
-            # o3d.visualization.draw_geometries([line_set, pcd], window_name='Open3D', width=1920,
-            #                                   height=1080, left=50, top=50)
+
+            # draw keypoints
+            pcd_key.points = o3d.utility.Vector3dVector(keypoints)
+            pcd_key.colors = o3d.utility.Vector3dVector([[0.5, 0.5, 0] for i in range(len(keypoints))])
 
             vis.update_geometry(pcd)
+            vis.update_geometry(pcd_key)
             vis.update_geometry(line_set)
             vis.poll_events()
             vis.update_renderer()
 
-            # mlab.plot3d(bbx_keypoints_camera[:, 0], bbx_keypoints_camera[:, 1], bbx_keypoints_camera[:, 2], color=(0.5, 1, 1), tube_radius=2)
-            # x = [x_min, x_min]
-            # y = [y_max, y_max]
-            # z = [z_min, z_max]
-            # bbx_keypoints_local = np.hstack([np.array(x).reshape(2,1), np.array(y).reshape(2,1), np.array(z).reshape(2,1)])
-            # bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(local_frame.T)) + keypoints[0]
-            # mlab.plot3d(bbx_keypoints_camera[:, 0], bbx_keypoints_camera[:, 1], bbx_keypoints_camera[:, 2], color=(0.5, 1, 1), tube_radius=2)
-            #
-            # x = [x_max, x_max]
-            # y = [y_max, y_max]
-            # z = [z_min, z_max]
-            # bbx_keypoints_local = np.hstack([np.array(x).reshape(2,1), np.array(y).reshape(2,1), np.array(z).reshape(2,1)])
-            # bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(local_frame.T)) + keypoints[0]
-            # mlab.plot3d(bbx_keypoints_camera[:, 0], bbx_keypoints_camera[:, 1], bbx_keypoints_camera[:, 2], color=(0.5, 1, 1), tube_radius=2)
-            #
-            # x = [x_max, x_max]
-            # y = [y_min, y_min]
-            # z = [z_min, z_max]
-            # bbx_keypoints_local = np.hstack([np.array(x).reshape(2,1), np.array(y).reshape(2,1), np.array(z).reshape(2,1)])
-            # bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(local_frame.T)) + keypoints[0]
-            # mlab.plot3d(bbx_keypoints_camera[:, 0], bbx_keypoints_camera[:, 1], bbx_keypoints_camera[:, 2], color=(0.5, 1, 1), tube_radius=2)
-
-            # draw keypoints
-            x1 = keypoints[:, 0]
-            y1 = keypoints[:, 1]
-            z1 = keypoints[:, 2]
-
-            # mlab.points3d(x1, y1, z1, color=(0.5, 0.5, 1), scale_factor=10)
-            # mlab.show()
-            # mlab.close()
             # save 3d bbx
             # np.save(frame +'_2dbbx.npy', np.array([x_max, x_min, y_max, y_min,z_max, z_min]))
 
