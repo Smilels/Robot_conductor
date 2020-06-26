@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:UTF-8 -*-
 
-# File Name :depth_image_crop
-# Purpose : crop dataset to 100*100
+# File Name : bbx_generate_save
+# Purpose : generate, visualize, and save 2d and 3d bbx
 # Creation Date : 20-06-2020
 # Created By : Shuang Li
 
@@ -255,6 +255,7 @@ def main():
 
     DataFile.close()
     vis.destroy_window()
+
 
 if __name__ == '__main__':
     main()
