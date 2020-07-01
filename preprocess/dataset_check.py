@@ -50,7 +50,7 @@ for line in lines:
 data = np.array(label).reshape(-1, 64)
 unq, indices = np.unique(data[:, 1:], return_index=True, axis=0)
 full_indices = np.array(list(range(data.shape[0]+1)))
-same_gt = np.setdiff1d(full_indices, indices)
+bad_gt = np.setdiff1d(full_indices, indices)
 good_gt = data[indices]
 
 #todo: save good gt and only visulaize good data

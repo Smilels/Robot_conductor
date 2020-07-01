@@ -10,12 +10,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import open3d as o3d
+from scipy.spatial.transform import Rotation as R
 
 
 bbx_2d = False
 hand_bbx_3d = True
-save = False
-vis = True
+save = True
+show_bbx = False
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -46,7 +47,7 @@ def main():
     # camera center coordinates and focal length
     mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
-    if hand_bbx_3d:
+    if hand_bbx_3d and show_bbx:
         # Initialize Visualizer and start animation callback
         vis = o3d.visualization.Visualizer()
         vis.create_window()
@@ -84,17 +85,17 @@ def main():
         line_set.colors = o3d.utility.Vector3dVector([[0.5, 0.5, 1] for _ in range(len(lines3d))])
 
         # world frame
-        world_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+        world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[-400, -400, 300])
 
-        hand_frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+        hand_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=100, origin=[0, 0, 0])
 
         vis.add_geometry(pcd)
         vis.add_geometry(pcd_key)
         vis.add_geometry(line_set)
-        vis.add_geometry(world_frame)
-        vis.add_geometry(hand_frame)
+        vis.add_geometry(world_frame_vis)
+        vis.add_geometry(hand_frame_vis)
 
     for line in lines[9940:]:
         frame = line.split(' ')[0].replace("\t", "")
@@ -131,7 +132,7 @@ def main():
             y_min = int(max(0, left))
             y_max = int(min(img.shape[1] - 1, right))
 
-            if vis:
+            if show_bbx:
                 fig = plt.figure(1)
 
                 # palm
@@ -169,9 +170,9 @@ def main():
                 plt.scatter(x[0:], y[0:], s=25, c='magenta')
                 plt.plot(x, y, 'm', linewidth=1.5)
 
-
                 # draw boundingbox
-                # hint: here the coordinate system is normal cartersian system, which x axis going right, y axis going up
+                # hint: here the coordinate system is normal cartersian system,
+                # which x axis going right, y axis going up
                 x = [x_min, x_max, x_max, x_min, x_min]
                 y = [y_max, y_max, y_min, y_min, y_max]
                 plt.scatter(y, x, s=25, c='cyan')
@@ -206,8 +207,10 @@ def main():
             if np.linalg.norm(wrist_x) != 0:
                 wrist_x /= np.linalg.norm(wrist_x)
 
-            local_frame = np.vstack([wrist_x, wrist_y, wrist_z])
-            local_keypoints = np.dot((keypoints - keypoints[0]), local_frame.T)
+            hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
+            local_keypoints = np.dot((keypoints - keypoints[0]), hand_frame.T)
+            r = R.from_matrix(hand_frame)
+            axisangle = r.as_rotvec()
 
             padding = 80
 
@@ -219,7 +222,7 @@ def main():
             z_min = np.min(local_keypoints[:, 2]) - padding / 2
             z_max = np.max(local_keypoints[:, 2]) + padding / 2
 
-            if vis:
+            if show_bbx:
                 whole_points = depth2pc(img)
 
                 # draw local 3d boundingbox
@@ -228,33 +231,33 @@ def main():
                 z = [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]
                 bbx_keypoints_local = np.hstack(
                     [np.array(x).reshape(8, 1), np.array(y).reshape(8, 1), np.array(z).reshape(8, 1)])
-                bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(local_frame.T)) + keypoints[0]
+                bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(hand_frame.T)) + keypoints[0]
 
                 pcd.points = o3d.utility.Vector3dVector(whole_points)
                 line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera)
                 pcd_key.points = o3d.utility.Vector3dVector(keypoints)
-                hand_frame.rotate(local_frame.T, center=False)
-                hand_frame.translate(keypoints[0], relative=False)
+                hand_frame_vis.rotate(hand_frame.T, center=False)
+                hand_frame_vis.translate(keypoints[0], relative=False)
 
                 vis.update_geometry(pcd)
                 vis.update_geometry(pcd_key)
                 vis.update_geometry(line_set)
-                vis.update_geometry(world_frame)
-                vis.update_geometry(hand_frame)
+                vis.update_geometry(world_frame_vis)
+                vis.update_geometry(hand_frame_vis)
                 vis.poll_events()
                 vis.update_renderer()
-                hand_frame.rotate(np.linalg.inv(local_frame.T), center=False)
+                hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=False)
 
             if save:
-                # todo:local_frame to angle-axis representation
                 b = y_max -y_min
                 w = x_max - x_min
                 h = z_max - z_min
-                np.save(frame +'_3dbbx.npy', [keypoints[0], local_frame,
-                                              np.array([x_max, y_max, z_max, b, w, h])])
+                pose_bbx = np.hstack([keypoints[0], axisangle, np.array([x_max, y_max, z_max, b, w, h])])
+                np.save(frame +'_3dbbx.npy', pose_bbx)
 
     DataFile.close()
-    vis.destroy_window()
+    if show_bbx:
+        vis.destroy_window()
 
 
 if __name__ == '__main__':
