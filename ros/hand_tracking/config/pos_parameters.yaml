@@ -1,0 +1,22 @@
+# Parameters for the controller
+
+# Maximum joint-space velocity, just for safety. You should mainly rely on
+# the cartesian velocity limit.
+max_joint_velocity: 2.1
+
+# max_shoulder_pan_velocity: 2.1
+# max_shoulder_lift_velocity: 2.1
+# max_upper_arm_roll_velocity: 3.27
+# max_elbow_flex_velocity: 3.3
+# max_forearm_roll_velocity: 3.6
+# max_wrist_flex_velocity: 3.1
+# max_wrist_roll_velocity: 3.6
+
+# Control frequency
+frequency: 20
+
+# left arm velocity factor
+left_velocity_factor: 0.1
+
+# right arm velocity factor
+right_velocity_factor: 0.1
