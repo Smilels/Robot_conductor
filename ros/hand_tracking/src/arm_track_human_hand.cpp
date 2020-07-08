@@ -96,8 +96,8 @@ void HandTrack::arm_track() {
 //        std::cout<< "i am in left teleop" <<std::endl;
         ros::Time begin = ros::Time::now();
         // get current hand data
-        camera_hand_tf.setOrigin(tf2::Vector3(shared_hand_data[0], shared_hand_data[1],
-                                                  shared_hand_data[2]));
+        camera_hand_tf.setOrigin(tf2::Vector3(shared_hand_data[0]/1000, shared_hand_data[1]/1000,
+                                                  (shared_hand_data[2]-40)/1000));
         camera_hand_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
         base_hand_tf = base_camera_tf * camera_hand_tf;
         tf2::Stamped <tf2::Transform> base_hand_tfStamped(base_hand_tf, ros::Time::now(), base_frame_);
