@@ -74,8 +74,7 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     }
 
     shared_hand_data.resize(3);
-    std::string topic_name = "/hand_tracking/hand_pose";
-
+    std::string topic_name = "hand_bbx";
     subscriber_ = nh_.subscribe<std_msgs::Float64MultiArray>(topic_name, 1, &HandTrack::callback, this);
 
     // note: sleep 1s to wait data!
@@ -89,24 +88,36 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
 }
 
 void HandTrack::arm_track() {
-    tf2::Transform base_hand_tf, camera_hand_tf;
+    tf2::Transform base_hand_tf, base_robot_tf, camera_hand_tf, camera_robot_tf;
     geometry_msgs::TransformStamped transformStamped;
     ros::Rate rate(frequency);
     while (ros::ok()) {
-//        std::cout<< "i am in left teleop" <<std::endl;
+        std::cout<< "i am in arm track" <<std::endl;
         ros::Time begin = ros::Time::now();
         // get current hand data
-        camera_hand_tf.setOrigin(tf2::Vector3(shared_hand_data[0]/1000, shared_hand_data[1]/1000,
-                                                  (shared_hand_data[2]-40)/1000));
+        std::vector<double> human_hand_pos = shared_hand_data;
+        camera_robot_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
+                                                  human_hand_pos[2]-40));
+        camera_robot_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
+        base_robot_tf = base_camera_tf * camera_hand_tf;
+        tf2::Stamped <tf2::Transform> base_robot_tfStamped(base_robot_tf, ros::Time::now(), base_frame_);
+        transformStamped = tf2::toMsg(base_robot_tfStamped);
+        transformStamped.header.frame_id = base_frame_;
+        transformStamped.child_frame_id = "robot_reach_frame";
+        tf_broadcaster_.sendTransform(transformStamped);
+
+        camera_hand_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
+                                               human_hand_pos[2]));
+        // todo: consider orientation of the human hand
         camera_hand_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
         base_hand_tf = base_camera_tf * camera_hand_tf;
         tf2::Stamped <tf2::Transform> base_hand_tfStamped(base_hand_tf, ros::Time::now(), base_frame_);
         transformStamped = tf2::toMsg(base_hand_tfStamped);
         transformStamped.header.frame_id = base_frame_;
-        transformStamped.child_frame_id = "hand_frame";
+        transformStamped.child_frame_id = "human_hand_frame";
         tf_broadcaster_.sendTransform(transformStamped);
 
-        bioik_method(joint_values, joint_model_group_, base_hand_tf);
+        bioik_method(joint_values, joint_model_group_, base_robot_tf);
         if (demo_test_)
             joint_state_publisher(joint_values);
         if (vel_method_)
@@ -119,25 +130,27 @@ void HandTrack::arm_track() {
 
 void HandTrack::bioik_method(std::vector<double> &joint_values,
                                 const robot_state::JointModelGroup *joint_model_group_,
-                                const tf2::Transform &base_hand_tf) {
+                                const tf2::Transform &base_robot_tf) {
     bio_ik::BioIKKinematicsQueryOptions ik_options;
     ik_options.replace = true;
     ik_options.return_approximate_solution = true;
 
     robot_state::RobotState robot_state_(robot_model_);
-        wrist_link_ = "l_HandTrack_palm_link";
-        robot_state_.setJointGroupPositions(joint_model_group_, previous_joint_values);
+    wrist_link_ = "l_palm_link";
+    robot_state_.setJointGroupPositions(joint_model_group_, previous_joint_values);
 
     if (wrist_pos_)
-        ik_options.goals.emplace_back(new bio_ik::PositionGoal(wrist_link_, base_hand_tf.getOrigin(), 1));
+        ik_options.goals.emplace_back(new bio_ik::PositionGoal(wrist_link_, base_robot_tf.getOrigin(), 1));
+        ik_options.fixed_joints.push_back("l_wrist_flex_joint");
+        ik_options.fixed_joints.push_back("l_wrist_roll_joint");
     if (wrist_rot_)
-        ik_options.goals.emplace_back(new bio_ik::OrientationGoal(wrist_link_, base_hand_tf.getRotation(), 1));
+        ik_options.goals.emplace_back(new bio_ik::OrientationGoal(wrist_link_, base_robot_tf.getRotation(), 1));
     if (wrist_pose_)
         ik_options.goals.emplace_back(
-                new bio_ik::PoseGoal(wrist_link_, base_hand_tf.getOrigin(), base_hand_tf.getRotation(), 1));
+                new bio_ik::PoseGoal(wrist_link_, base_robot_tf.getOrigin(), base_robot_tf.getRotation(), 1));
     // regularizationGoal tries to keep the joint-space IK solution as close as possible to the given robot seed configuration
     ik_options.goals.emplace_back(new bio_ik::RegularizationGoal(1));
-    ik_options.goals.emplace_back(new bio_ik::MinimalDisplacementGoal(1));
+//    ik_options.goals.emplace_back(new bio_ik::MinimalDisplacementGoal(1));
 
     bool found_ik = robot_state_.setFromIK(
             joint_model_group_,
@@ -269,7 +282,7 @@ void HandTrack::callback(const std_msgs::Float64MultiArrayConstPtr &hand_data) {
     for (int j = 0; j < 3; j++) {
         if (std::isnan(hand_data->data[j]))
             break;
-        shared_hand_data.at(j) = hand_data->data[j];
+        shared_hand_data.at(j) = hand_data->data[j] / 1000;
     }
 }
 
