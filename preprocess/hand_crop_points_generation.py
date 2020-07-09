@@ -12,9 +12,6 @@ import cv2
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 
-
-bbx_2d = False
-hand_bbx_3d = True
 save = True
 show_bbx = False
 
@@ -40,15 +37,15 @@ def depth2pc(depth):
 
 
 def main():
-    """crop human hand images to 100*100"""
+    """save hand points"""
     base_path = "../data/"
     DataFile = open(base_path + "full_annotation/Subject_1/301375_loc_shift_made_by_qi_20180112_v2.txt", "r")
     lines = DataFile.read().splitlines()
     # camera center coordinates and focal length
     mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
-    if hand_bbx_3d and show_bbx:
-        # Initialize Visualizer and start animation callback
+    if show_bbx:
+        # Initialize visualizer and start animation callback
         vis = o3d.visualization.Visualizer()
         vis.create_window()
 
@@ -117,81 +114,79 @@ def main():
         for i in range(0, len(keypoints)):
             uv[i] = ((1 / keypoints[i][2]) * mat @ keypoints[i])[0:2]
 
-        if hand_bbx_3d:
-            # local wrist frame build
-            tf_palm = keypoints[1] - keypoints[0]
-            ff_palm = keypoints[2] - keypoints[0]
-            mf_palm = keypoints[3] - keypoints[0]
-            rf_palm = keypoints[4] - keypoints[0]
-            lf_palm = keypoints[5] - keypoints[0]
-            # palm = np.array([tf_palm, ff_palm, mf_palm, rf_palm, lf_palm])
-            palm = np.array([ff_palm, mf_palm, rf_palm, lf_palm])
+        # local wrist frame build
+        tf_palm = keypoints[1] - keypoints[0]
+        ff_palm = keypoints[2] - keypoints[0]
+        mf_palm = keypoints[3] - keypoints[0]
+        rf_palm = keypoints[4] - keypoints[0]
+        lf_palm = keypoints[5] - keypoints[0]
+        # palm = np.array([tf_palm, ff_palm, mf_palm, rf_palm, lf_palm])
+        palm = np.array([ff_palm, mf_palm, rf_palm, lf_palm])
 
-            wrist_z = np.mean(palm, axis=0)
-            wrist_z /= np.linalg.norm(wrist_z)
-            wrist_y = np.cross(ff_palm, rf_palm)
-            wrist_y /= np.linalg.norm(wrist_y)
-            wrist_x = np.cross(wrist_y, wrist_z)
-            if np.linalg.norm(wrist_x) != 0:
-                wrist_x /= np.linalg.norm(wrist_x)
+        wrist_z = np.mean(palm, axis=0)
+        wrist_z /= np.linalg.norm(wrist_z)
+        wrist_y = np.cross(ff_palm, rf_palm)
+        wrist_y /= np.linalg.norm(wrist_y)
+        wrist_x = np.cross(wrist_y, wrist_z)
+        if np.linalg.norm(wrist_x) != 0:
+            wrist_x /= np.linalg.norm(wrist_x)
 
-            hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
-            local_keypoints = np.dot((keypoints - keypoints[0]), hand_frame.T)
-            r = R.from_matrix(hand_frame)
-            axisangle = r.as_rotvec()
+        hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
+        local_keypoints = np.dot((keypoints - keypoints[0]), hand_frame.T)
+        r = R.from_matrix(hand_frame)
+        axisangle = r.as_rotvec()
 
-            padding = 80
+        padding = 80
 
-            # hint: z is going inside, x is going right, y is going down
-            x_min = np.min(local_keypoints[:, 0]) - padding / 2
-            x_max = np.max(local_keypoints[:, 0]) + padding / 2
-            y_min = np.min(local_keypoints[:, 1]) - padding / 2
-            y_max = np.max(local_keypoints[:, 1]) + padding / 2
-            z_min = np.min(local_keypoints[:, 2]) - padding / 2
-            z_max = np.max(local_keypoints[:, 2]) + padding / 2
+        # hint: z is going inside, x is going right, y is going down
+        x_min = np.min(local_keypoints[:, 0]) - padding / 2
+        x_max = np.max(local_keypoints[:, 0]) + padding / 2
+        y_min = np.min(local_keypoints[:, 1]) - padding / 2
+        y_max = np.max(local_keypoints[:, 1]) + padding / 2
+        z_min = np.min(local_keypoints[:, 2]) - padding / 2
+        z_max = np.max(local_keypoints[:, 2]) + padding / 2
 
-            whole_points = depth2pc(img, True, left, top)
-            hand_points = whole_points.copy()
+        whole_points = depth2pc(img, True, left, top)
+        local_whole_keypoints = np.dot((whole_points - keypoints[0]), hand_frame.T)
 
-            hand_points_ind = np.all(
-            np.concatenate((whole_points[:, 0].reshape(-1, 1) > x_min, whole_points[:, 0].reshape(-1, 1) < x_max,
-                            whole_points[:, 1].reshape(-1, 1) > y_min, whole_points[:, 1].reshape(-1, 1) < y_max,
-                            whole_points[:, 2].reshape(-1, 1) > z_min, whole_points[:, 2].reshape(-1, 1) < z_max), axis=1), axis=1)
-            hand_points = whole_points[hand_points_ind]
-            
+        hand_points_ind = np.all(
+            np.concatenate((local_whole_keypoints[:, 0].reshape(-1, 1) > x_min,
+                            local_whole_keypoints[:, 0].reshape(-1, 1) < x_max,
+                            local_whole_keypoints[:, 1].reshape(-1, 1) > y_min,
+                            local_whole_keypoints[:, 1].reshape(-1, 1) < y_max,
+                            local_whole_keypoints[:, 2].reshape(-1, 1) > z_min,
+                            local_whole_keypoints[:, 2].reshape(-1, 1) < z_max), axis=1), axis=1)
+        local_hand_points = local_whole_keypoints[hand_points_ind]
+        crop_points_camera = np.dot(local_hand_points, np.linalg.inv(hand_frame.T)) + keypoints[0]
 
-            if show_bbx:
-                whole_points = depth2pc(img)
+        if show_bbx:
+            # draw local 3d boundingbox
+            x = [x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min]
+            y = [y_max, y_max, y_min, y_min, y_max, y_max, y_min, y_min]
+            z = [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]
+            bbx_keypoints_local = np.hstack(
+                [np.array(x).reshape(8, 1), np.array(y).reshape(8, 1), np.array(z).reshape(8, 1)])
+            bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(hand_frame.T)) + keypoints[0]
 
-                # draw local 3d boundingbox
-                x = [x_min, x_max, x_max, x_min, x_min, x_max, x_max, x_min]
-                y = [y_max, y_max, y_min, y_min, y_max, y_max, y_min, y_min]
-                z = [z_min, z_min, z_min, z_min, z_max, z_max, z_max, z_max]
-                bbx_keypoints_local = np.hstack(
-                    [np.array(x).reshape(8, 1), np.array(y).reshape(8, 1), np.array(z).reshape(8, 1)])
-                bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(hand_frame.T)) + keypoints[0]
+            pcd.points = o3d.utility.Vector3dVector(whole_points)
+            line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera)
+            pcd_key.points = o3d.utility.Vector3dVector(keypoints)
+            hand_frame_vis.rotate(hand_frame.T, center=False)
+            hand_frame_vis.translate(keypoints[0], relative=False)
 
-                pcd.points = o3d.utility.Vector3dVector(whole_points)
-                line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera)
-                pcd_key.points = o3d.utility.Vector3dVector(keypoints)
-                hand_frame_vis.rotate(hand_frame.T, center=False)
-                hand_frame_vis.translate(keypoints[0], relative=False)
+            vis.update_geometry(pcd)
+            vis.update_geometry(pcd_key)
+            vis.update_geometry(line_set)
+            vis.update_geometry(world_frame_vis)
+            vis.update_geometry(hand_frame_vis)
+            vis.poll_events()
+            vis.update_renderer()
+            hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=False)
 
-                vis.update_geometry(pcd)
-                vis.update_geometry(pcd_key)
-                vis.update_geometry(line_set)
-                vis.update_geometry(world_frame_vis)
-                vis.update_geometry(hand_frame_vis)
-                vis.poll_events()
-                vis.update_renderer()
-                hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=False)
-
-            if save:
-                b = y_max -y_min
-                w = x_max - x_min
-                h = z_max - z_min
-                pose_bbx = np.hstack([keypoints[0], axisangle, np.array([x_max, y_max, z_max, b, w, h])])
-                np.save(frame +'_3dbbx.npy', pose_bbx)
+        if save:
+            pose_bbx = np.hstack([keypoints[0], axisangle])
+            np.save(os.path.join(base_path, pose, frame + '_6dpose.npy'), pose_bbx)
+            np.save(os.path.join(base_path, pc, frame +'_3dpc.npy'), crop_points_camera)
 
     DataFile.close()
     if show_bbx:
