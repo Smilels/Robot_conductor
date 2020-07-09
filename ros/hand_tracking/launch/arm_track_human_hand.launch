@@ -3,16 +3,19 @@
       <rosparam command="load" file="$(find hand_tracking)/config/pos_parameters.yaml" />
 
       <!-- On pr2 robot >-->
-      <param name="vel_method" type="bool" value="true" />
+      <param name="vel_method" type="bool" value="false" />
 
       <!--In demo test mode, we will publish the /joint_states topic in order to quickly visulize joint changes.-->
       <!--Therefore, when we run 'roslaunch tams_pr2_moveit_config demo.launch', we need to uncomment joint_state_publisher -->
       <!-- Then run an individual node 'rosrun joint_state_publisher joint_state_publisher' >-->
-      <param name="demo_test" type="bool" value="false" />
-      <param name="move_group_name" type="std::string" value="left_arm" />
+      <param name="demo_test" type="bool" value="true" />
+      <param name="move_group_name" type="string" value="left_arm" />
 
       <param name="wrist_pos" type="bool" value="true" />
       <param name="wrist_rot" type="bool" value="false" />
       <param name="wrist_pose" type="bool" value="false" />
+
+      <param name="delta_min_threshold" type="double" value="0.3" />
+
     </node>
 </launch>

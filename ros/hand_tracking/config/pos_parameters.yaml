@@ -15,8 +15,8 @@ max_joint_velocity: 2.1
 # Control frequency
 frequency: 20
 
-# left arm velocity factor
+# left arm feedback velocity factor
 left_velocity_factor: 0.1
 
-# right arm velocity factor
+# right arm feedback velocity factor
 right_velocity_factor: 0.1

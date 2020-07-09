@@ -64,9 +64,11 @@ private:
     void bioik_method(std::vector<double> & joint_values,
                       const robot_state::JointModelGroup* joint_model_group_, const tf2::Transform & base_wrist_tf);
 
-    void controller_vel_method(const std::vector<double> & joint_values);
+    void controller_vel_method(const std::vector<double> & joint_values,
+                                const std::vector<double> &joint_feedforward_diff);
 
     void joint_state_publisher(const std::vector<double> & goal);
+    void zero_Velcity();
 
     ros::Subscriber subscriber_;
     std::vector<double> shared_hand_data;
@@ -109,6 +111,7 @@ private:
     double rh_wrist2_eular;
 
     double left_velocity_factor;
+    double DELTA_MIN_THRESHOLD;
     std::vector<double> max_arm_velocity;
     int frequency;
 };

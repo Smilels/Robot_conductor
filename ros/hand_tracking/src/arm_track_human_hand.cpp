@@ -15,6 +15,9 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     private_node.param<bool>("wrist_pose", wrist_pose_, "false");
     private_node.param<std::string>("move_group_name", move_group_name_, "left_arm");
 
+    // delta min threshold
+    private_node.getParam("delta_min_threshold", DELTA_MIN_THRESHOLD);
+
     // Maximum joint-space velocity, just for safety. You should mainly rely on
     V(private_node.getParam("left_velocity_factor", left_velocity_factor));
     // Control frequency
@@ -117,11 +120,9 @@ void HandTrack::arm_track() {
         transformStamped.child_frame_id = "human_hand_frame";
         tf_broadcaster_.sendTransform(transformStamped);
 
+        std::vector<double> joint_values;
         bioik_method(joint_values, joint_model_group_, base_robot_tf);
-        if (demo_test_)
-            joint_state_publisher(joint_values);
-        if (vel_method_)
-            controller_vel_method(joint_values);
+
         rate.sleep();
         ros::Time end = ros::Time::now();
         std::cout << "time Duration " << end.toSec() - begin.toSec() << std::endl;
@@ -136,7 +137,7 @@ void HandTrack::bioik_method(std::vector<double> &joint_values,
     ik_options.return_approximate_solution = true;
 
     robot_state::RobotState robot_state_(robot_model_);
-    wrist_link_ = "l_palm_link";
+    wrist_link_ = "l_gripper_tool_link";
     robot_state_.setJointGroupPositions(joint_model_group_, previous_joint_values);
 
     if (wrist_pos_)
@@ -201,14 +202,33 @@ void HandTrack::bioik_method(std::vector<double> &joint_values,
             }
         }
 
-        // robot_state_.copyJointGroupPositions(joint_model_group_, joint_values);
-        // robot_state_.update(); // if i use some catesian pose, then maybe need to consider update the robot state
+        std::vector<double> joint_feedforward_diff;
+        std::transform(joint_values.begin(), joint_values.end(), previous_joint_values.begin(), std::back_inserter(joint_feedforward_diff),
+                     [&](double l, double r) {
+                         return (l - r);
+                     });
+        double max_delta = *max_element(joint_feedforward_diff.begin(), joint_feedforward_diff.end());
+
+        if (max_delta > DELTA_MIN_THRESHOLD){
+            ROS_ERROR( "IK solution too far from current joint state, canceled. delta= %8.4lf", max_delta);
+            zero_Velcity();
+        }
+        else{
+            if (demo_test_)
+                joint_state_publisher(joint_values);
+            if (vel_method_)
+                controller_vel_method(joint_values, joint_feedforward_diff);
+        }
+      // robot_state_.copyJointGroupPositions(joint_model_group_, joint_values);
+      // robot_state_.update(); // if i use some catesian pose, then maybe need to consider update the robot state
     }
-    else
-        ROS_INFO("NO IK SOLUTION");
+    else{
+        ROS_WARN("NO IK SOLUTION");
+        zero_Velcity();
+    }
 }
 
-void HandTrack::controller_vel_method(const std::vector<double> &joint_values) {
+void HandTrack::controller_vel_method(const std::vector<double> &joint_values, const std::vector<double> &joint_feedforward_diff) {
     if (joint_values.size() > 0) {
       std::vector<double> start = mgi_->getCurrentJointValues();
       std_msgs::Float64MultiArray arm_joints_vel;
@@ -217,13 +237,6 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values) {
       // joint_feedback_diff measures the different of human motion and current robot state
       std::vector<double> joint_feedback_diff;
       std::transform(joint_values.begin(), joint_values.end(), start.begin(), std::back_inserter(joint_feedback_diff),
-                     [&](double l, double r) {
-                         return (l - r);
-                     });
-
-      // joint_feedforward_diff measures the different of human motion
-      std::vector<double> joint_feedforward_diff;
-      std::transform(joint_values.begin(), joint_values.end(), previous_joint_values.begin(), std::back_inserter(joint_feedforward_diff),
                      [&](double l, double r) {
                          return (l - r);
                      });
@@ -308,19 +321,23 @@ void HandTrack::get_static_transform() {
     tf2::convert(tfGeom, base_camera_tf);
 }
 
+void HandTrack::zero_Velcity() {
+    std_msgs::Float64MultiArray reset_arm_joints_vel;
+
+    reset_arm_joints_vel.data.assign(7, 0);
+    arm_vel_pub_.publish(reset_arm_joints_vel);
+}
+
 void STOP_VEL_CONTROLLER(int sig) {
     std::cout << "singal handler (SIGINT/SIGKILL) started" << std::endl;
 
     std_msgs::Float64MultiArray reset_arm_joints_vel;
 
     reset_arm_joints_vel.data.assign(7, 0);
-    arm_vel_pub_.publish(reset_arm_joints_vel);
-
-    // delete scene_;
+    arm_vel_pub_.publish(reset_arm_joints_vel);    // delete scene_;
     // delete r_joint_model_group_;
     // delete l_joint_model_group_;
     // delete shared_imu_data;
-
     ros::shutdown();
 }
 
