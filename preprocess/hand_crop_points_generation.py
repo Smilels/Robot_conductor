@@ -12,8 +12,8 @@ import cv2
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 
-save = True
-show_bbx = False
+save = False
+show_bbx = True
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -57,6 +57,11 @@ def main():
         whole_points = depth2pc(img)
         pcd.points = o3d.utility.Vector3dVector(whole_points)
 
+        pcd_crop = o3d.geometry.PointCloud()
+        img = cv2.imread(base_path + "76150/" + 'image_D' + '00000000' + '.png', cv2.IMREAD_ANYDEPTH)
+        whole_points = depth2pc(img)
+        pcd_crop.points = o3d.utility.Vector3dVector(whole_points)
+
         pcd_key = o3d.geometry.PointCloud()
         pcd_key.points = o3d.utility.Vector3dVector(np.random.rand(21, 3))
         pcd_key.colors = o3d.utility.Vector3dVector([[1, 0, 0] for _ in range(21)])
@@ -89,6 +94,7 @@ def main():
             size=100, origin=[0, 0, 0])
 
         vis.add_geometry(pcd)
+        vis.add_geometry(pcd_crop)
         vis.add_geometry(pcd_key)
         vis.add_geometry(line_set)
         vis.add_geometry(world_frame_vis)
@@ -131,6 +137,7 @@ def main():
         if np.linalg.norm(wrist_x) != 0:
             wrist_x /= np.linalg.norm(wrist_x)
 
+        # local frame matrix
         hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
         local_keypoints = np.dot((keypoints - keypoints[0]), hand_frame.T)
         r = R.from_matrix(hand_frame)
@@ -146,7 +153,7 @@ def main():
         z_min = np.min(local_keypoints[:, 2]) - padding / 2
         z_max = np.max(local_keypoints[:, 2]) + padding / 2
 
-        whole_points = depth2pc(img, True, left, top)
+        whole_points = depth2pc(img)
         local_whole_keypoints = np.dot((whole_points - keypoints[0]), hand_frame.T)
 
         hand_points_ind = np.all(
@@ -157,6 +164,7 @@ def main():
                             local_whole_keypoints[:, 2].reshape(-1, 1) > z_min,
                             local_whole_keypoints[:, 2].reshape(-1, 1) < z_max), axis=1), axis=1)
         local_hand_points = local_whole_keypoints[hand_points_ind]
+        # todo: visulize if cropped hand points are right. If corect, please help me generate and save my dataset
         crop_points_camera = np.dot(local_hand_points, np.linalg.inv(hand_frame.T)) + keypoints[0]
 
         if show_bbx:
@@ -169,12 +177,14 @@ def main():
             bbx_keypoints_camera = np.dot(bbx_keypoints_local, np.linalg.inv(hand_frame.T)) + keypoints[0]
 
             pcd.points = o3d.utility.Vector3dVector(whole_points)
+            pcd_crop.points = o3d.utility.Vector3dVector(crop_points_camera)
             line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera)
             pcd_key.points = o3d.utility.Vector3dVector(keypoints)
             hand_frame_vis.rotate(hand_frame.T, center=False)
             hand_frame_vis.translate(keypoints[0], relative=False)
 
             vis.update_geometry(pcd)
+            vis.update_geometry(pcd_crop)
             vis.update_geometry(pcd_key)
             vis.update_geometry(line_set)
             vis.update_geometry(world_frame_vis)
