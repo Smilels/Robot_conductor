@@ -56,7 +56,7 @@ public:
 private:
     double clip(double x, double maxv, double minv);
 
-    tf2::Transform get_camera_transform();
+    tf2::Stamped<tf2::Transform> get_camera_transform();
 
     void callback(const std_msgs::Float64MultiArrayConstPtr & bone_data);
     // void callback(const std_msgs::Float64MultiArrayConstPtr & bone_data);

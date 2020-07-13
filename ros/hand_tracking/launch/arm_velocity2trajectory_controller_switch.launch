@@ -1,6 +1,6 @@
 <launch>
 <node pkg="hand_tracking" name="arm_velocity2trajectory_controllers_switch" type="arm_velocity2trajectory_controllers_switch" output="screen" >
-<param name="left_arm" value="false" type="bool" />
+<param name="left_arm" value="true" type="bool" />
 <param name="right_arm" value="true" type="bool"/>
 </node>
 </launch>
