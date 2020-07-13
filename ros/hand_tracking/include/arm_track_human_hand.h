@@ -56,7 +56,7 @@ public:
 private:
     double clip(double x, double maxv, double minv);
 
-    void get_static_transform();
+    tf2::Transform get_camera_transform();
 
     void callback(const std_msgs::Float64MultiArrayConstPtr & bone_data);
     // void callback(const std_msgs::Float64MultiArrayConstPtr & bone_data);
@@ -88,7 +88,6 @@ private:
     std::vector<double> pre_joints;
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformBroadcaster tf_broadcaster_;
-    tf2::Stamped <tf2::Transform> base_camera_tf;
 
     std::string base_frame_;
     std::vector<double> inital_state;

@@ -95,23 +95,28 @@ void HandTrack::arm_track() {
     geometry_msgs::TransformStamped transformStamped;
     ros::Rate rate(frequency);
     while (ros::ok()) {
-        std::cout<< "i am in arm track" <<std::endl;
+        std::cout<< "I am in arm tracking" <<std::endl;
         ros::Time begin = ros::Time::now();
         // get current hand data
         std::vector<double> human_hand_pos = shared_hand_data;
         camera_robot_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
                                                   human_hand_pos[2]-40));
         camera_robot_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
-        base_robot_tf = base_camera_tf * camera_hand_tf;
+
+        tf2::Transform base_camera_tf = get_camera_transform();
+        base_robot_tf = base_camera_tf * camera_robot_tf;
+
+        // broadcast robot reach frame
         tf2::Stamped <tf2::Transform> base_robot_tfStamped(base_robot_tf, ros::Time::now(), base_frame_);
         transformStamped = tf2::toMsg(base_robot_tfStamped);
         transformStamped.header.frame_id = base_frame_;
         transformStamped.child_frame_id = "robot_reach_frame";
         tf_broadcaster_.sendTransform(transformStamped);
 
+        // broadcast hand frame
         camera_hand_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
                                                human_hand_pos[2]));
-        // todo: consider orientation of the human hand
+        // todo: consider orientation of the human hand in future
         camera_hand_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
         base_hand_tf = base_camera_tf * camera_hand_tf;
         tf2::Stamped <tf2::Transform> base_hand_tfStamped(base_hand_tf, ros::Time::now(), base_frame_);
@@ -140,10 +145,11 @@ void HandTrack::bioik_method(std::vector<double> &joint_values,
     wrist_link_ = "l_gripper_tool_link";
     robot_state_.setJointGroupPositions(joint_model_group_, previous_joint_values);
 
-    if (wrist_pos_)
+    if (wrist_pos_){
         ik_options.goals.emplace_back(new bio_ik::PositionGoal(wrist_link_, base_robot_tf.getOrigin(), 1));
         ik_options.fixed_joints.push_back("l_wrist_flex_joint");
         ik_options.fixed_joints.push_back("l_wrist_roll_joint");
+    }
     if (wrist_rot_)
         ik_options.goals.emplace_back(new bio_ik::OrientationGoal(wrist_link_, base_robot_tf.getRotation(), 1));
     if (wrist_pose_)
@@ -174,21 +180,6 @@ void HandTrack::bioik_method(std::vector<double> &joint_values,
             ik_options);
 
     if (found_ik) {
-        // for (auto &n : joint_model_group_->getVariableNames()) {
-        //     // keeps boundaries -M_PI < publishPosition <= M_PI
-        //     if (M_PI < robot_state_.getVariablePosition(n)) {
-        //         //  joint_values[j] = joint_values[j] - 2 * M_PI;
-        //         robot_state_.setVariablePosition(
-        //                 n, robot_state_.getVariablePosition(n) - 2 * M_PI);
-        //         ROS_WARN("keeps boundaries for publishPosition <= M_PI");
-        //     }
-        //     if (-M_PI >= robot_state_.getVariablePosition(n)) {
-        //         // joint_values[j] = joint_values[j] + 2 * M_PI;
-        //         robot_state_.setVariablePosition(
-        //                 n, robot_state_.getVariablePosition(n) + 2 * M_PI);
-        //         ROS_WARN("keeps boundaries for publishPosition > -M_PI");
-        //     }
-        // }
         robot_state_.copyJointGroupPositions(joint_model_group_, joint_values);
         // keeps boundaries -M_PI < publishPosition <= M_PI
         for (int j = 0; j <joint_values.size(); j++) {
@@ -307,18 +298,35 @@ double HandTrack::clip(double x, double maxv = 0, double minv = 0) {
     return x;
 }
 
-void HandTrack::get_static_transform() {
+tf2::Transform HandTrack::get_camera_transform() {
+    tf2::Stamped <tf2::Transform> base_gripper_tf;
+    tf2::Stamped <tf2::Transform> gripper_camera_tf;
+    tf2::Transform base_camera_tf;
+
     tf2_ros::TransformListener tfListener(tfBuffer);
     geometry_msgs::TransformStamped tfGeom;
     try {
-        tfGeom = tfBuffer.lookupTransform(base_frame_, "torso_lift_link",
-                                          ros::Time(0), ros::Duration(5.0));
+      tfGeom = tfBuffer.lookupTransform(base_frame_, "l_gripper_tool_frame",
+                                        ros::Time(0), ros::Duration(5.0));
     }
     catch (tf2::TransformException &ex) {
-        ROS_WARN("%s", ex.what());
-        ros::Duration(1.0).sleep();
+      ROS_WARN("%s", ex.what());
+      ros::Duration(1.0).sleep();
     }
-    tf2::convert(tfGeom, base_camera_tf);
+    tf2::convert(tfGeom, base_gripper_tf);
+
+    try {
+      tfGeom = tfBuffer.lookupTransform("l_gripper_tool_frame", "realsense_left_arm_optical_frame",
+                                        ros::Time(0), ros::Duration(5.0));
+    }
+    catch (tf2::TransformException &ex) {
+      ROS_WARN("%s", ex.what());
+      ros::Duration(1.0).sleep();
+    }
+    tf2::convert(tfGeom, gripper_camera_tf);
+
+    base_camera_tf = base_gripper_tf * gripper_camera_tf;
+    return base_camera_tf;
 }
 
 void HandTrack::zero_Velcity() {
@@ -343,7 +351,7 @@ void STOP_VEL_CONTROLLER(int sig) {
 
 int main(int argc, char **argv) {
     signal(SIGINT, STOP_VEL_CONTROLLER);
-    ros::init(argc, argv, "pn_teleop_pr2_arms_node", 1); // 1=no NoSigintHandler
+    ros::init(argc, argv, "arm_track_human_hand_node", 1); // 1=no NoSigintHandler
     ros::NodeHandle nh;
     ros::AsyncSpinner spinner(4);
     spinner.start();
