@@ -13,8 +13,8 @@
         <remap from="camera_info" to="$(arg camera_info_topic)" />
         <param name="camera_frame" type="str" value="$(arg camera_frame_name)" />
         <param name="publish_tag_detections_image" type="bool" value="true" />
-        <rosparam command="load" file="$(find easy_handeye)/config/apriltag/settings.yaml"/>
-        <rosparam command="load" file="$(find easy_handeye)/config/apriltag/tags.yaml"/>
+        <rosparam command="load" file="$(find hand_tracking)/config/apriltag/settings.yaml"/>
+        <rosparam command="load" file="$(find hand_tracking)/config/apriltag/tags.yaml"/>
     </node>
 
     <include file="$(find easy_handeye)/launch/calibrate.launch">
@@ -24,14 +24,14 @@
         <!--    <arg name="namespace" value="pr2_handeye_calib"/> -->
 
         <!-- fill in the following parameters according to your robot's published tf frames -->
-        <arg name="robot_base_frame" value="base_link"/>
+        <arg name="robot_base_frame" value="torso_lift_link"/>
         <arg name="move_group" value="left_arm"/>
         <arg name="robot_effector_frame" value="l_gripper_tool_frame"/>
 
         <!-- fill in the following parameters according to your tracking system's published tf frames -->
 
         <arg name="tracking_base_frame" value="$(arg camera_frame_name)"/>
-        <arg name="tracking_marker_frame" value="tag_5"/>
+        <arg name="tracking_marker_frame" value="tag_7"/>
 
     </include>
 </launch>
