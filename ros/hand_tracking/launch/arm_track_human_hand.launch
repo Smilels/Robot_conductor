@@ -1,7 +1,8 @@
 <launch>
     <!--<node name="tams_pr2_handeye_publish" pkg="hand_tracking" type="tams_pr2_handeye_publish.py" output="screen">-->
-
-    <node name="arm_track_human_hand" pkg="hand_tracking" type="arm_track_human_hand" output="screen">
+pr2_kinect_arm_track_human_hand
+<!-- <node name="arm_track_human_hand" pkg="hand_tracking" type="arm_track_human_hand" output="screen"> -->
+  <node name="pr2_kinect_arm_track_human_hand" pkg="hand_tracking" type="pr2_kinect_arm_track_human_hand" output="screen">
       <rosparam command="load" file="$(find hand_tracking)/config/pos_parameters.yaml" />
 
       <!-- On pr2 robot >-->
