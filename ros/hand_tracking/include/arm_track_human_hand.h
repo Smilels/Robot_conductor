@@ -72,6 +72,7 @@ private:
 
     ros::Subscriber subscriber_;
     std::vector<double> shared_hand_data;
+    std::vector<double> previous_shared_hand_data;
     ros::Publisher joint_pub_;
     ros::Publisher trajectory_publisher_;
     ros::NodeHandle nh_;
@@ -84,6 +85,7 @@ private:
 //    moveit::core::RobotState robot_state_;
 //    moveit::core::RobotState previous_state_;
 
+    tf2::Stamped <tf2::Transform> base_camera_tf;
     tf2::Stamped <tf2::Transform> previous_transform_;
     std::vector<double> pre_joints;
     tf2_ros::Buffer tfBuffer;

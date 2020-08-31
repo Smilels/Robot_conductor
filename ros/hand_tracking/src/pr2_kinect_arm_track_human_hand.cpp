@@ -35,7 +35,12 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     joint_model_group_ = robot_model_->getJointModelGroup(move_group_name_);
     previous_joint_values = mgi_->getCurrentJointValues();
 
-//    get_static_transform();
+    moveit::planning_interface::MoveGroupInterface *head_mgi_ = new moveit::planning_interface::MoveGroupInterface("head");
+    std::vector<double> pr2_head_position{0.32, 0.11};
+    head_mgi_->setJointValueTarget(pr2_head_position);
+    head_mgi_->move();
+
+   base_camera_tf = get_camera_transform();
 
     if (demo_test_) {
         inital_state = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -97,15 +102,27 @@ void HandTrack::arm_track() {
     while (ros::ok()) {
         // std::cout<< "I am in arm tracking" <<std::endl;
         ros::Time begin = ros::Time::now();
-        // get current hand data
-        std::vector<double> human_hand_pos = shared_hand_data;
+        // if the depth is too far away (such as more than 2 meter), then this depth data is wrong
+        if (shared_hand_data[2] > 2)
+            continue;
+
+        // get current hand data if the depth value difference is within 20cm
+        // need to be evulated by robot experiments
+        std::vector<double> human_hand_pos;
+        if (shared_hand_data[2] - previous_shared_hand_data[2] > 0.2)
+            human_hand_pos = previous_shared_hand_data;
+        else
+            human_hand_pos = shared_hand_data;
 
         // broadcast hand frame
         camera_hand_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
                                                human_hand_pos[2]));
         // todo: consider orientation of the human hand in future
         camera_hand_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
+
+        // tf2::Stamped<tf2::Transform> base_camera_tf = get_camera_transform();
         base_hand_tf = base_camera_tf * camera_hand_tf;
+
         tf2::Stamped <tf2::Transform> base_hand_tfStamped(base_hand_tf, ros::Time::now(), base_frame_);
         transformStamped = tf2::toMsg(base_hand_tfStamped);
         transformStamped.header.frame_id = base_frame_;
@@ -113,9 +130,9 @@ void HandTrack::arm_track() {
         tf_broadcaster_.sendTransform(transformStamped);
 
         base_robot_tf = camera_hand_tf;
-        base_robot_tf.setOrigin(base_hand_tf.getOrigin().getX(),
+        base_robot_tf.setOrigin(tf2::Vector3(base_hand_tf.getOrigin().getX(),
                                 base_hand_tf.getOrigin().getY(),
-                                base_hand_tf.getOrigin().getZ());
+                                base_hand_tf.getOrigin().getZ() - 0.3));
 
         // broadcast robot reach frame
         tf2::Stamped <tf2::Transform> base_robot_tfStamped(base_robot_tf, ros::Time::now(), base_frame_);
@@ -126,6 +143,9 @@ void HandTrack::arm_track() {
 
         std::vector<double> joint_values;
         bioik_method(joint_values, joint_model_group_, base_robot_tf);
+
+        // set previous shared hand data as the human hand pose at this time
+        previous_shared_hand_data = human_hand_pos;
 
         rate.sleep();
         ros::Time end = ros::Time::now();
