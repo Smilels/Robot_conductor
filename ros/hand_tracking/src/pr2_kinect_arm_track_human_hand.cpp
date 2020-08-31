@@ -35,12 +35,7 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     joint_model_group_ = robot_model_->getJointModelGroup(move_group_name_);
     previous_joint_values = mgi_->getCurrentJointValues();
 
-    moveit::planning_interface::MoveGroupInterface *head_mgi_ = new moveit::planning_interface::MoveGroupInterface("head");
-    std::vector<double> pr2_head_position{0.32, 0.11};
-    head_mgi_->setJointValueTarget(pr2_head_position);
-    head_mgi_->move();
-
-   base_camera_tf = get_camera_transform();
+    base_camera_tf = get_camera_transform();
 
     if (demo_test_) {
         inital_state = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -82,7 +77,7 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     }
 
     shared_hand_data.resize(3);
-    std::string topic_name = "right_hand_point";
+    std::string topic_name = "rosOpenpose/right_hand_point";
     subscriber_ = nh_.subscribe<std_msgs::Float64MultiArray>(topic_name, 1, &HandTrack::callback, this);
 
     // note: sleep 1s to wait data!
@@ -99,6 +94,8 @@ void HandTrack::arm_track() {
     tf2::Transform base_hand_tf, base_robot_tf, camera_hand_tf, camera_robot_tf;
     geometry_msgs::TransformStamped transformStamped;
     ros::Rate rate(frequency);
+    
+    previous_shared_hand_data = shared_hand_data;
     while (ros::ok()) {
         // std::cout<< "I am in arm tracking" <<std::endl;
         ros::Time begin = ros::Time::now();
@@ -109,17 +106,18 @@ void HandTrack::arm_track() {
         // get current hand data if the depth value difference is within 20cm
         // need to be evulated by robot experiments
         std::vector<double> human_hand_pos;
-        if (shared_hand_data[2] - previous_shared_hand_data[2] > 0.2)
-            human_hand_pos = previous_shared_hand_data;
-        else
+        //if (shared_hand_data[2] - previous_shared_hand_data[2] > 0.2)
+        //    human_hand_pos = previous_shared_hand_data;
+        //else
             human_hand_pos = shared_hand_data;
-
+        // std::cout << "human hand pos :" << human_hand_pos[0] << " " << human_hand_pos[1]<< " " << human_hand_pos[2] << std::endl;  
         // broadcast hand frame
         camera_hand_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
                                                human_hand_pos[2]));
         // todo: consider orientation of the human hand in future
         camera_hand_tf.setRotation(tf2::Quaternion(0, 0, 0, 1));
 
+        // std::cout<< "I am in arm tracking" <<std::endl;
         // tf2::Stamped<tf2::Transform> base_camera_tf = get_camera_transform();
         base_hand_tf = base_camera_tf * camera_hand_tf;
 
@@ -129,7 +127,7 @@ void HandTrack::arm_track() {
         transformStamped.child_frame_id = "human_hand_frame";
         tf_broadcaster_.sendTransform(transformStamped);
 
-        base_robot_tf = camera_hand_tf;
+        base_robot_tf = base_hand_tf;
         base_robot_tf.setOrigin(tf2::Vector3(base_hand_tf.getOrigin().getX(),
                                 base_hand_tf.getOrigin().getY(),
                                 base_hand_tf.getOrigin().getZ() - 0.3));
@@ -268,7 +266,7 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values, c
       // shoulder_lift_joint
       arm_joints_vel.data[1] = clip(joint_diff[1], 2.1, -2.1);
       // upper_arm_roll_joint
-      arm_joints_vel.data[2] = clip(joint_diff[2], 3.27, -3.27);
+      // arm_joints_vel.data[2] = clip(joint_diff[2], 3.27, -3.27);
       // elbow_flex_joint
       arm_joints_vel.data[3] = clip(joint_diff[3], 3.3, -3.3);
       // forearm_roll_joint
@@ -276,7 +274,7 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values, c
       // wrist_flex_joint
       arm_joints_vel.data[5] = clip(joint_diff[5], 3.1, -3.1);
       // wrist_roll_joint
-      arm_joints_vel.data[6] = clip(joint_diff[6], 3.6, -3.6);
+      // arm_joints_vel.data[6] = clip(joint_diff[6], 3.6, -3.6);
       arm_vel_pub_.publish(arm_joints_vel);
       previous_joint_values = joint_values;
     }
@@ -307,7 +305,7 @@ void HandTrack::callback(const std_msgs::Float64MultiArrayConstPtr &hand_data) {
     for (int j = 0; j < 3; j++) {
         if (std::isnan(hand_data->data[j]))
             break;
-        shared_hand_data.at(j) = hand_data->data[j] / 1000;
+        shared_hand_data.at(j) = hand_data->data[j];
     }
 }
 

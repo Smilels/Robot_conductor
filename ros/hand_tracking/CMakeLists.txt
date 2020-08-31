@@ -39,3 +39,6 @@ target_link_libraries(arm_velocity2trajectory_controllers_switch ${catkin_LIBRAR
 
 add_executable(arm_group_velocity_controller_switch src/arm_group_velocity_controller_switch.cpp)
 target_link_libraries(arm_group_velocity_controller_switch ${catkin_LIBRARIES})
+
+add_executable(left_arm_tracking_preparation src/left_arm_tracking_preparation.cpp)
+target_link_libraries(left_arm_tracking_preparation ${catkin_LIBRARIES})
