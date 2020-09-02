@@ -85,6 +85,7 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
 
     std::vector <std::thread> threads;
     threads.push_back(std::thread(&HandTrack::arm_track, this));
+    threads.push_back(std::thread(&HandTrack::stopFlag, this));
 
     for (auto &thread : threads)
         thread.join();
@@ -94,7 +95,7 @@ void HandTrack::arm_track() {
     tf2::Transform base_hand_tf, base_robot_tf, camera_hand_tf, camera_robot_tf;
     geometry_msgs::TransformStamped transformStamped;
     ros::Rate rate(frequency);
-    
+
     previous_shared_hand_data = shared_hand_data;
     while (ros::ok()) {
         // std::cout<< "I am in arm tracking" <<std::endl;
@@ -110,7 +111,7 @@ void HandTrack::arm_track() {
         //    human_hand_pos = previous_shared_hand_data;
         //else
             human_hand_pos = shared_hand_data;
-        // std::cout << "human hand pos :" << human_hand_pos[0] << " " << human_hand_pos[1]<< " " << human_hand_pos[2] << std::endl;  
+        // std::cout << "human hand pos :" << human_hand_pos[0] << " " << human_hand_pos[1]<< " " << human_hand_pos[2] << std::endl;
         // broadcast hand frame
         camera_hand_tf.setOrigin(tf2::Vector3(human_hand_pos[0], human_hand_pos[1],
                                                human_hand_pos[2]));
@@ -307,6 +308,11 @@ void HandTrack::callback(const std_msgs::Float64MultiArrayConstPtr &hand_data) {
             break;
         shared_hand_data.at(j) = hand_data->data[j];
     }
+    for (int j = 3; j < 6; j++) {
+        if (std::isnan(hand_data->data[j]))
+            break;
+        left_hand_data.at(j) = hand_data->data[j];
+    }
 }
 
 double HandTrack::clip(double x, double maxv = 0, double minv = 0) {
@@ -339,6 +345,19 @@ void HandTrack::zero_Velcity() {
 
     reset_arm_joints_vel.data.assign(7, 0);
     arm_vel_pub_.publish(reset_arm_joints_vel);
+}
+
+void HandTrack::stopFlag(){
+  if  (left_hand_data[2] < 0.5)
+  {
+    std::cout << "singal handler (SIGINT/SIGKILL) started" << std::endl;
+
+    zero_Velcity();
+    // delete r_joint_model_group_;
+    // delete l_joint_model_group_;
+    // delete shared_imu_data;
+    ros::shutdown();
+  }
 }
 
 void STOP_VEL_CONTROLLER(int sig) {

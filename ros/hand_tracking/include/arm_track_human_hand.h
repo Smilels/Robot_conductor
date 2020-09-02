@@ -69,9 +69,11 @@ private:
 
     void joint_state_publisher(const std::vector<double> & goal);
     void zero_Velcity();
+    void stopFlag();
 
     ros::Subscriber subscriber_;
     std::vector<double> shared_hand_data;
+    std::vector<double> left_hand_data;
     std::vector<double> previous_shared_hand_data;
     ros::Publisher joint_pub_;
     ros::Publisher trajectory_publisher_;
