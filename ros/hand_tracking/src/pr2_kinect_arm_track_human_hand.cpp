@@ -77,6 +77,7 @@ HandTrack::HandTrack(ros::NodeHandle &nh) : nh_(nh) {
     }
 
     shared_hand_data.resize(3);
+    left_hand_data.resize(3);
     std::string topic_name = "rosOpenpose/right_hand_point";
     subscriber_ = nh_.subscribe<std_msgs::Float64MultiArray>(topic_name, 1, &HandTrack::callback, this);
 
@@ -148,7 +149,7 @@ void HandTrack::arm_track() {
 
         rate.sleep();
         ros::Time end = ros::Time::now();
-        std::cout << "time Duration " << end.toSec() - begin.toSec() << std::endl;
+        //std::cout << "time Duration " << end.toSec() - begin.toSec() << std::endl;
     }
 }
 
@@ -259,7 +260,7 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values, c
           if (-M_PI > diff)
               diff = diff + 2 * M_PI;
           joint_diff[j] = diff;
-          ROS_INFO_STREAM("joint" << j << " " << "diff is "<<diff);
+          // ROS_INFO_STREAM("joint" << j << " " << "diff is "<<diff);
       }
 
       // shoulder_pan_joint
@@ -276,7 +277,7 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values, c
       arm_joints_vel.data[5] = clip(joint_diff[5], 3.1, -3.1);
       // wrist_roll_joint
       // arm_joints_vel.data[6] = clip(joint_diff[6], 3.6, -3.6);
-      arm_vel_pub_.publish(arm_joints_vel);
+      //arm_vel_pub_.publish(arm_joints_vel);
       previous_joint_values = joint_values;
     }
 }
@@ -311,7 +312,7 @@ void HandTrack::callback(const std_msgs::Float64MultiArrayConstPtr &hand_data) {
     for (int j = 3; j < 6; j++) {
         if (std::isnan(hand_data->data[j]))
             break;
-        left_hand_data.at(j) = hand_data->data[j];
+        left_hand_data.at(j-3) = hand_data->data[j];
     }
 }
 
@@ -348,17 +349,22 @@ void HandTrack::zero_Velcity() {
 }
 
 void HandTrack::stopFlag(){
-  if  (left_hand_data[2] < 0.5)
+  while(ros::ok())
   {
-    std::cout << "singal handler (SIGINT/SIGKILL) started" << std::endl;
-
-    zero_Velcity();
-    // delete r_joint_model_group_;
-    // delete l_joint_model_group_;
-    // delete shared_imu_data;
-    ros::shutdown();
+    try{
+      if(left_hand_data[1]<-0.1 )
+        {
+          std::cout << "Receive stop command, stop now!" << std::endl;
+          zero_Velcity();
+          ros::shutdown();
+        }
+   }
+  catch(const std::exception& e)
+    {
+      ROS_ERROR("No left hand data");
+    }
   }
-}
+ }
 
 void STOP_VEL_CONTROLLER(int sig) {
     std::cout << "singal handler (SIGINT/SIGKILL) started" << std::endl;
