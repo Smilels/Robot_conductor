@@ -34,11 +34,5 @@ add_executable(pr2_kinect_arm_track_human_hand src/pr2_kinect_arm_track_human_ha
 add_dependencies(pr2_kinect_arm_track_human_hand ${catkin_EXPORTED_TARGETS})
 target_link_libraries(pr2_kinect_arm_track_human_hand ${catkin_LIBRARIES} ccd)
 
-add_executable(arm_velocity2trajectory_controllers_switch src/arm_velocity2trajectory_controllers_switch.cpp)
-target_link_libraries(arm_velocity2trajectory_controllers_switch ${catkin_LIBRARIES})
-
-add_executable(arm_group_velocity_controller_switch src/arm_group_velocity_controller_switch.cpp)
-target_link_libraries(arm_group_velocity_controller_switch ${catkin_LIBRARIES})
-
-add_executable(left_arm_tracking_preparation src/left_arm_tracking_preparation.cpp)
-target_link_libraries(left_arm_tracking_preparation ${catkin_LIBRARIES})
+add_executable(arm_head_preparation src/arm_head_preparation.cpp)
+target_link_libraries(arm_head_preparation ${catkin_LIBRARIES})
