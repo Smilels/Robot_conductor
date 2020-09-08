@@ -63,41 +63,43 @@ int main(int argc, char **argv)
         std::cin >> imput_command;
         switch (imput_command){
         case '1':
+        {
             moveit::planning_interface::MoveGroupInterface *head_mgi_ = new moveit::planning_interface::MoveGroupInterface("head");
             std::vector<double> pr2_head_position{0.32, 0.51};
             head_mgi_->setJointValueTarget(pr2_head_position);
             head_mgi_->move();
             std::cout << "Head On please" << std::endl;
             break;
-        case '2':
+        }
+        case '2':{
             moveit::planning_interface::MoveGroupInterface *left_arm_mgi_ = new moveit::planning_interface::MoveGroupInterface("left_arm");
             std::vector<double> left_arm_start_position{0.0, 0.63, 0.2, -0.15, 0.0, -0.31, -0.0};
             left_arm_mgi_->setJointValueTarget(left_arm_start_position);
             left_arm_mgi_->move();
             std::cout << "Left arm pose is ready" << std::endl;
-            break;
-        case '3':
+            break;}
+        case '3':{
             velocity2trajectory_controllers(nh, "true", "false");
             std::cout << "Left arm from trajectory control to velocity control" << std::endl;
-            break;
-        case '4':
+            break;}
+        case '4':{
             velocity2trajectory_controllers(nh, "false", "true");
             std::cout << "Right arm from trajectory control to velocity control" << std::endl;
-            break;
-        case '5':
+            break;}
+        case '5':{
             trajectory2velocity_controllers(nh, "true", "false");
             std::cout << "Left arm from velocity control to trajectory control" << std::endl;
-            break;
-        case '6':
+            break;}
+        case '6':{
             trajectory2velocity_controllers(nh, "false", "true");
             std::cout << "Right arm from velocity control to trajectory control" << std::endl;
-            break;
-        case 'q' :
+            break;}
+        case 'q' :{
             ros::shutdown();
-            break;
-        default:
+            break;}
+        default:{
 		    ROS_ERROR("Invalid Selection. Please enter '1-6'. ");
-		    break;
+		    break;}
         }
         std::cin.clear();
     }
