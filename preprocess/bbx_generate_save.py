@@ -236,7 +236,7 @@ def main():
                 pcd.points = o3d.utility.Vector3dVector(whole_points)
                 line_set.points = o3d.utility.Vector3dVector(bbx_keypoints_camera)
                 pcd_key.points = o3d.utility.Vector3dVector(keypoints)
-                hand_frame_vis.rotate(hand_frame.T, center=False)
+                hand_frame_vis.rotate(hand_frame.T, center=(0, 0, 0))
                 hand_frame_vis.translate(keypoints[0], relative=False)
 
                 vis.update_geometry(pcd)
@@ -246,7 +246,7 @@ def main():
                 vis.update_geometry(hand_frame_vis)
                 vis.poll_events()
                 vis.update_renderer()
-                hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=False)
+                hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=(0, 0, 0))
 
             if save:
                 b = y_max -y_min
