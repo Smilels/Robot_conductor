@@ -14,7 +14,7 @@ import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from IPython import embed
 from sklearn.decomposition import PCA
-import multiprecessing as mp
+import multiprocessing as mp
 
 save_points = True
 show_bbx = False
@@ -28,6 +28,12 @@ centerY = 245.287079
 SAMPLE_NUM = 1024
 SAMPLE_NUM_level1 = 512
 SAMPLE_NUM_level2 = 128
+
+base_path = "/homeL/shuang/dataset/Bighand2017/"
+img_path = base_path + "images/"
+points_path = base_path + "points/"
+local_frame_path = base_path + "local_frame/"
+mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
 
 def depth2pc(depth):
@@ -84,154 +90,146 @@ def farthest_point_sampling_fast(point_cloud, sample_num):
     return np.unique(sampled_idx)
 
 
+def get_points(line):
+    # 1 read groundtruth and image
+    frame = line.split(' ')[0].replace("\t", "")
+    # print(frame)
+
+    # 1.1 image path depends on the location of your training dataset
+    try:
+        img = cv2.imread(img_path + str(frame), cv2.IMREAD_ANYDEPTH)
+    except:
+        print("no Image", frame)
+        return
+
+    label_source = line.split('\t')[1:]
+    label = []
+    label.append([float(l.replace(" ", "")) for l in label_source[0:63]])
+    keypoints = np.array(label).reshape(21, 3)
+
+    # 1.3 get hand points
+    padding = 80
+    points = depth2pc(img)
+
+    x_min_max = [np.min(keypoints[:, 0] - padding / 2), np.max(keypoints[:, 0]) + padding / 2]
+    y_min_max = [np.min(keypoints[:, 1] - padding / 2), np.max(keypoints[:, 1]) + padding / 2]
+    z_min_max = [np.min(keypoints[:, 2] - padding / 2), np.max(keypoints[:, 2]) + padding / 2]
+    hand_points = points[np.where((points[:, 0] > x_min_max[0]) & (points[:, 0] < x_min_max[1]) &
+                                  (points[:, 1] > y_min_max[0]) & (points[:, 1] < y_min_max[1]) &
+                                  (points[:, 2] > z_min_max[0]) & (points[:, 2] < z_min_max[1]))]
+    if (len(hand_points) < 300):
+        print("hand points is %d, isless than 300, maybe it's a broken image" % len(hand_points))
+        return
+    # 2 PCA rotation
+    hand_points_norm = hand_points - hand_points.mean(axis=0)
+    pca = PCA(n_components=3, svd_solver='full')
+    pca.fit(hand_points_norm)
+    hand_points_pca = pca.transform(hand_points_norm) + hand_points.mean(axis=0)
+
+    # 3 downsampling
+    if len(hand_points_pca) > SAMPLE_NUM:
+        rand_ind = np.random.choice(len(hand_points_pca), size=SAMPLE_NUM, replace=False)
+        hand_points_pca_sampled = hand_points_pca[rand_ind]
+    else:
+        rand_ind = np.random.choice(len(hand_points_pca), size=SAMPLE_NUM, replace=True)
+        hand_points_pca_sampled = hand_points_pca[rand_ind]
+
+    # 4 compute surface normal
+    normals_pca = get_normal(hand_points_pca)
+    normals_pca_sampled = normals_pca[rand_ind]
+
+    # 5 normalize point cloud
+    x_min_max = [np.min(hand_points_pca_sampled[:, 0]), np.max(hand_points_pca_sampled[:, 0])]
+    y_min_max = [np.min(hand_points_pca_sampled[:, 1]), np.max(hand_points_pca_sampled[:, 1])]
+    z_min_max = [np.min(hand_points_pca_sampled[:, 2]), np.max(hand_points_pca_sampled[:, 2])]
+    scale = 1.2
+    bb3d_x_len = scale * (x_min_max[1] - x_min_max[0])
+    bb3d_y_len = scale * (y_min_max[1] - y_min_max[0])
+    bb3d_z_len = scale * (z_min_max[1] - z_min_max[0])
+    max_bb3d_len = bb3d_x_len
+    hand_points_normalized_sampled = hand_points_pca_sampled / max_bb3d_len
+    if len(hand_points_pca) < SAMPLE_NUM:
+        offset = np.mean(hand_points_pca) / max_bb3d_len
+    else:
+        offset = np.mean(hand_points_normalized_sampled)
+    hand_points_normalized_sampled = hand_points_normalized_sampled - offset
+
+    # 6 FPS Sampling
+    pc = np.concatenate([hand_points_normalized_sampled, normals_pca_sampled], axis=1)
+    # 1st level
+    sampled_idx_l1 = farthest_point_sampling_fast(hand_points_normalized_sampled, SAMPLE_NUM_level1)
+    other_idx = np.setdiff1d(np.arange(SAMPLE_NUM), sampled_idx_l1)
+    new_idx = np.concatenate((sampled_idx_l1, other_idx))
+    pc = pc[new_idx]
+    # 2nd level
+    sampled_idx_l2 = farthest_point_sampling_fast(hand_points_normalized_sampled[:SAMPLE_NUM_level1],
+                                                  SAMPLE_NUM_level2)
+    other_idx = np.setdiff1d(np.arange(SAMPLE_NUM_level1), sampled_idx_l2)
+    new_idx = np.concatenate((sampled_idx_l2, other_idx))
+    pc[:SAMPLE_NUM_level1, :] = pc[new_idx]
+
+    if show_bbx:
+        pcd = o3d.geometry.PointCloud()
+        pcd_hand = o3d.geometry.PointCloud()
+        pcd_pca = o3d.geometry.PointCloud()
+        pcd_pca_sample = o3d.geometry.PointCloud()
+        pcd_key = o3d.geometry.PointCloud()
+        pcd_normalized = o3d.geometry.PointCloud()
+        pcd_normalized_sample = o3d.geometry.PointCloud()
+
+        pcd_pca_sample.points = o3d.utility.Vector3dVector(hand_points_pca_sampled)
+        pcd_key.points = o3d.utility.Vector3dVector(keypoints)
+        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd_hand.points = o3d.utility.Vector3dVector(hand_points)
+        pcd_pca.points = o3d.utility.Vector3dVector(hand_points_pca)
+
+        pcd_normalized.points = o3d.utility.Vector3dVector(hand_points_normalized_sampled)
+        pcd_normalized_sample.points = o3d.utility.Vector3dVector(
+            pc[:SAMPLE_NUM_level1, :][:, 0:3] + np.array([0, 0, 0.1]))
+
+        pcd_hand.paint_uniform_color([0.9, 0.1, 0.1])
+        pcd_key.paint_uniform_color([0.1, 0.1, 0.7])
+        pcd_pca.paint_uniform_color([0.1, 0.9, 0.1])
+        pcd_pca_sample.paint_uniform_color([0.1, 0.1, 0.7])
+        o3d.visualization.draw_geometries([pcd, pcd_key, pcd_pca, pcd_pca_sample], point_show_normal=False)
+    if save_points:
+        if not os.path.exists(points_path):
+            os.makedirs(points_path)
+        np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), pc)
+    if save_local_frame:
+        # local wrist frame build
+        tf_palm = keypoints[1] - keypoints[0]
+        ff_palm = keypoints[2] - keypoints[0]
+        mf_palm = keypoints[3] - keypoints[0]
+        rf_palm = keypoints[4] - keypoints[0]
+        lf_palm = keypoints[5] - keypoints[0]
+        # palm = np.array([tf_palm, ff_palm, mf_palm, rf_palm, lf_palm])
+        palm = np.array([ff_palm, mf_palm, rf_palm, lf_palm])
+
+        wrist_z = np.mean(palm, axis=0)
+        wrist_z /= np.linalg.norm(wrist_z)
+        wrist_y = np.cross(ff_palm, rf_palm)
+        wrist_y /= np.linalg.norm(wrist_y)
+        wrist_x = np.cross(wrist_y, wrist_z)
+        if np.linalg.norm(wrist_x) != 0:
+            wrist_x /= np.linalg.norm(wrist_x)
+
+        # local coordinate matrix
+        hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
+        if not os.path.exists(local_frame_path):
+            os.makedirs(local_frame_path)
+        np.save(os.path.join(local_frame_path, frame[:-4] + '_localframe.npy'), hand_frame)
+
+
 def main():
     """save hand points"""
-    base_path = "/homeL/shuang/dataset/Bighand2017/"
-    img_path = base_path + "images/"
-    points_path = base_path + "points/"
-    local_frame_path = base_path + "local_frame/"
     DataFile = open(base_path + "Training_Annotation.txt", "r")
     lines = DataFile.read().splitlines()
     # camera center coordinates and focal length
-    mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
-
-    cores = np.cpu_count()
+    cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
-
     pool.map(get_points, lines)
-    try:
-        for line in lines:
-            # 1 read groundtruth and image
-            frame = line.split(' ')[0].replace("\t", "")
-            # print(frame)
 
-            # 1.1 image path depends on the location of your training dataset
-            try:
-                img = cv2.imread(img_path + str(frame), cv2.IMREAD_ANYDEPTH)
-            except RuntimeError:
-                print("no Image")
-                continue
-
-            label_source = line.split('\t')[1:]
-            label = []
-            label.append([float(l.replace(" ", "")) for l in label_source[0:63]])
-            keypoints = np.array(label).reshape(21, 3)
-
-            # 1.3 get hand points
-            padding = 80
-            points = depth2pc(img)
-
-            x_min_max = [np.min(keypoints[:, 0] - padding / 2), np.max(keypoints[:, 0]) + padding / 2]
-            y_min_max = [np.min(keypoints[:, 1] - padding / 2), np.max(keypoints[:, 1]) + padding / 2]
-            z_min_max = [np.min(keypoints[:, 2] - padding / 2), np.max(keypoints[:, 2]) + padding / 2]
-            hand_points = points[np.where((points[:, 0] > x_min_max[0]) & (points[:, 0] < x_min_max[1]) &
-                                               (points[:, 1] > y_min_max[0]) & (points[:, 1] < y_min_max[1]) &
-                                               (points[:, 2] > z_min_max[0]) & (points[:, 2] < z_min_max[1]))]
-
-            # 2 PCA rotation
-            hand_points_norm = hand_points - hand_points.mean(axis=0)
-            pca = PCA(n_components=3, svd_solver='full')
-            pca.fit(hand_points_norm)
-            hand_points_pca = pca.transform(hand_points_norm) + hand_points.mean(axis=0)
-
-            # 3 downsampling
-            if len(hand_points_pca) > SAMPLE_NUM:
-                rand_ind = np.random.choice(len(hand_points_pca), size=SAMPLE_NUM, replace=False)
-                hand_points_pca_sampled = hand_points_pca[rand_ind]
-            elif len(hand_points_pca) > 500:
-                rand_ind = np.random.choice(len(hand_points_pca), size=SAMPLE_NUM, replace=True)
-                hand_points_pca_sampled = hand_points_pca[rand_ind]
-            else:
-                print("hand points less than 500, maybe it's a broken image")
-                break
-
-            # 4 compute surface normal
-            normals_pca = get_normal(hand_points_pca)
-            normals_pca_sampled = normals_pca[rand_ind]
-
-            # 5 normalize point cloud
-            x_min_max = [np.min(hand_points_pca_sampled[:,0]), np.max(hand_points_pca_sampled[:,0])]
-            y_min_max = [np.min(hand_points_pca_sampled[:,1]), np.max(hand_points_pca_sampled[:,1])]
-            z_min_max = [np.min(hand_points_pca_sampled[:,2]), np.max(hand_points_pca_sampled[:,2])]
-            scale = 1.2
-            bb3d_x_len = scale*(x_min_max[1]-x_min_max[0])
-            bb3d_y_len = scale*(y_min_max[1]-y_min_max[0])
-            bb3d_z_len = scale*(z_min_max[1]-z_min_max[0])
-            max_bb3d_len = bb3d_x_len
-            hand_points_normalized_sampled = hand_points_pca_sampled/max_bb3d_len
-            if len(hand_points_pca) < SAMPLE_NUM:
-                offset = np.mean(hand_points_pca)/max_bb3d_len
-            else:
-                offset = np.mean(hand_points_normalized_sampled)
-            hand_points_normalized_sampled = hand_points_normalized_sampled - offset
-
-            # 6 FPS Sampling
-            pc = np.concatenate([hand_points_normalized_sampled, normals_pca_sampled], axis=1)
-            # 1st level
-            sampled_idx_l1 = farthest_point_sampling_fast(hand_points_normalized_sampled, SAMPLE_NUM_level1)
-            other_idx = np.setdiff1d(np.arange(SAMPLE_NUM), sampled_idx_l1)
-            new_idx = np.concatenate((sampled_idx_l1, other_idx))
-            pc = pc[new_idx]
-            # 2nd level
-            sampled_idx_l2 = farthest_point_sampling_fast(hand_points_normalized_sampled[:SAMPLE_NUM_level1],
-                                                          SAMPLE_NUM_level2)
-            other_idx = np.setdiff1d(np.arange(SAMPLE_NUM_level1), sampled_idx_l2)
-            new_idx = np.concatenate((sampled_idx_l2, other_idx))
-            pc[:SAMPLE_NUM_level1, :] = pc[new_idx]
-
-            if show_bbx:
-                pcd = o3d.geometry.PointCloud()
-                pcd_hand = o3d.geometry.PointCloud()
-                pcd_pca = o3d.geometry.PointCloud()
-                pcd_pca_sample = o3d.geometry.PointCloud()
-                pcd_key = o3d.geometry.PointCloud()
-                pcd_normalized = o3d.geometry.PointCloud()
-                pcd_normalized_sample = o3d.geometry.PointCloud()
-
-                pcd_pca_sample.points = o3d.utility.Vector3dVector(hand_points_pca_sampled)
-                pcd_key.points = o3d.utility.Vector3dVector(keypoints)
-                pcd.points = o3d.utility.Vector3dVector(points)
-                pcd_hand.points = o3d.utility.Vector3dVector(hand_points)
-                pcd_pca.points = o3d.utility.Vector3dVector(hand_points_pca)
-
-                pcd_normalized.points = o3d.utility.Vector3dVector(hand_points_normalized_sampled)
-                pcd_normalized_sample.points = o3d.utility.Vector3dVector(pc[:SAMPLE_NUM_level1, :][:, 0:3] + np.array([0,0,0.1]))
-
-                pcd_hand.paint_uniform_color([0.9, 0.1, 0.1])
-                pcd_key.paint_uniform_color([0.1, 0.1, 0.7])
-                pcd_pca.paint_uniform_color([0.1, 0.9, 0.1])
-                pcd_pca_sample.paint_uniform_color([0.1, 0.1, 0.7])
-                o3d.visualization.draw_geometries([pcd, pcd_key, pcd_pca, pcd_pca_sample], point_show_normal=False)
-            if save_points:
-                if not os.path.exists(points_path):
-                    os.makedirs(points_path)
-                np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), pc)
-            if save_local_frame:
-                # local wrist frame build
-                tf_palm = keypoints[1] - keypoints[0]
-                ff_palm = keypoints[2] - keypoints[0]
-                mf_palm = keypoints[3] - keypoints[0]
-                rf_palm = keypoints[4] - keypoints[0]
-                lf_palm = keypoints[5] - keypoints[0]
-                # palm = np.array([tf_palm, ff_palm, mf_palm, rf_palm, lf_palm])
-                palm = np.array([ff_palm, mf_palm, rf_palm, lf_palm])
-
-                wrist_z = np.mean(palm, axis=0)
-                wrist_z /= np.linalg.norm(wrist_z)
-                wrist_y = np.cross(ff_palm, rf_palm)
-                wrist_y /= np.linalg.norm(wrist_y)
-                wrist_x = np.cross(wrist_y, wrist_z)
-                if np.linalg.norm(wrist_x) != 0:
-                    wrist_x /= np.linalg.norm(wrist_x)
-
-                # local coordinate matrix
-                hand_frame = np.vstack([wrist_x, wrist_y, wrist_z])
-                if not os.path.exists(local_frame_path):
-                    os.makedirs(local_frame_path)
-                np.save(os.path.join(local_frame_path, frame[:-4] + '_localframe.npy'), hand_frame)
-
-    except KeyboardInterrupt:
-        exit()
     DataFile.close()
 
 
