@@ -1,0 +1,13 @@
+open3d==0.10
+numpy
+msgpack-numpy
+lmdb
+h5py
+opencv-python
+rospkg
+tensorboardx
+
+hydra-core==0.11.3
+pytorch-lightning==0.7.1
+
+./pointnet2_ops_lib/.
