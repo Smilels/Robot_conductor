@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author     : Shuang Li
 # E-mail     : sli@informatik.uni-hamburg.de
-# Description: 
+# Description: bighand depth to normalized pointclouds
 # Date       : 15/09/2020: 17:41
 # File Name  : hand_preprocess.py
 
@@ -14,9 +14,10 @@ import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from IPython import embed
 from sklearn.decomposition import PCA
+import multiprecessing as mp
 
 save_points = True
-show_bbx = True
+show_bbx = False
 save_local_frame = True
 
 focalLengthX = 475.065948
@@ -85,15 +86,19 @@ def farthest_point_sampling_fast(point_cloud, sample_num):
 
 def main():
     """save hand points"""
-    base_path = "../data/"
-    img_path = base_path + "bighand2017_test/"
+    base_path = "/homeL/shuang/dataset/Bighand2017/"
+    img_path = base_path + "images/"
     points_path = base_path + "points/"
     local_frame_path = base_path + "local_frame/"
-    DataFile = open(base_path + "bighand2017_test_annotation.txt", "r")
+    DataFile = open(base_path + "Training_Annotation.txt", "r")
     lines = DataFile.read().splitlines()
     # camera center coordinates and focal length
     mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
+    cores = np.cpu_count()
+    pool = mp.Pool(processes=cores)
+
+    pool.map(get_points, lines)
     try:
         for line in lines:
             # 1 read groundtruth and image
