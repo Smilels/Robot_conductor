@@ -23,6 +23,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 class HandPointsDataset(data.Dataset):
     def __init__(self, transforms=None, train=True):
         self._cache = os.path.join(BASE_DIR, "sampled")  # get the image directory
+        if not os.path.exists(self._cache):
+            os.makedirs(self._cache)
         self.human_points_path = os.path.join(BASE_DIR, "../human_points/")
         self.shadow_points_path = os.path.join(BASE_DIR, "../shadow_points/")
         self.train = train
@@ -71,3 +73,21 @@ class HandPointsDataset(data.Dataset):
 
     def __len__(self):
         return self._len
+
+if __name__== "__main__":
+    from torchvision import transforms
+    import data_utils as d_utils
+
+    transforms = transforms.Compose(
+                    [
+                                    d_utils.PointcloudToTensor(),
+                                    d_utils.PointcloudRotate(axis=np.array([1, 0, 0])),
+                                    d_utils.PointcloudScale(),
+                                    d_utils.PointcloudTranslate(),
+                                    d_utils.PointcloudJitter(),
+                    ])
+    dset = ModelNet40Cls(16, train=True, transforms=transforms)
+    print(dset[0][0])
+    print(dset[0][1])
+    print(len(dset))
+    dloader = torch.utils.data.DataLoader(dset, batch_size=32, shuffle=True)
