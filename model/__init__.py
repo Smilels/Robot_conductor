@@ -1,0 +1,3 @@
+from Robot_conductor.models.pointnet2_ssg_cls import PointNet2ClassificationSSG
+from Robot_conductor.models.pointnet2_ssg_sem import PointNet2SemSegSSG
+from Robot_conductor.models.pointnet2_ssg_handjoints import PointNet2HandJointSSG
