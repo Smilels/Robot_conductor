@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Author     : Shuang Li
-# E-mail     : sli@informatik.uni-hamburg.de
-# Description: Training model
-# Date       : 17/09/2020: 15:50
-# File Name  : model
-
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -15,9 +7,8 @@ from pointnet2_ops.pointnet2_modules import PointnetFPModule, PointnetSAModule
 from torch.utils.data import DataLoader, DistributedSampler
 from torchvision import transforms
 
-import pointnet2.data.data_utils as d_utils
-from pointnet2.data.ModelNet40Loader import ModelNet40Cls
-
+import Robot_conductor.data.data_utils as d_utils
+from Robot_conductor.dataset import HandPointDataset
 
 def set_bn_momentum_default(bn_momentum):
     def fn(m):

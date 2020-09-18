@@ -1,4 +1,11 @@
-import pytorch_lightning as pl
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Author     : Shuang Li
+# E-mail     : sli@informatik.uni-hamburg.de
+# Description: Handjoint model from PoineNet2
+# Date       : 17/09/2020: 15:50
+# File Name  : pointnet2_ssg_handpoints
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,9 +13,10 @@ from pointnet2_ops.pointnet2_modules import PointnetFPModule, PointnetSAModule
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-import pointnet2.data.data_utils as d_utils
-from pointnet2.dataset import HandPointDataset
-from pointnet2.models.pointnet2_ssg_cls import PointNet2ClassificationSSG
+import Robot_conductor.dataset.data_utils as d_utils
+from Robot_conductor.dataset import HandPointsDataset
+from Robot_conductor.model.pointnet2_ssg_cls import PointNet2ClassificationSSG
+
 
 joint_upper_range = torch.tensor([0.349, 1.571, 1.571, 1.571, 0.785, 0.349, 1.571, 1.571,
                                   1.571, 0.349, 1.571, 1.571, 1.571, 0.349, 1.571, 1.571,
@@ -77,16 +85,9 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
 
         joints = self.forward(pc)
         joints = joints * (joint_upper_range - joint_lower_range) + joint_lower_range
-
         loss = F.mse_loss(joints, labels)
         with torch.no_grad():
-            acc = (torch.argmax(joints, dim=1) == labels).float().mean()
-            # compute acc
-            res_human = [np.sum(np.sum(abs(joint_human.cpu().data.numpy() - labels.cpu().data.numpy()) < thresh,
-                                axis=-1) == joint_size) for thresh in thresh_acc]
-            correct_human = [c + r for c, r in zip(correct_human, res_human)]
-
-        acc_human = [float(c) / float(len(loader.dataset)) for c in correct_human]
+            acc = (torch.sum(torch.abs(joints - labels) < 0.1, dim=-1) == 23).float().mean()
 
         log = dict(train_loss=loss, train_acc=acc)
 
@@ -95,9 +96,10 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
     def validation_step(self, batch, batch_idx):
         pc, labels = batch
 
-        logits = self.forward(pc)
-        loss = F.cross_entropy(logits, labels)
-        acc = (torch.argmax(logits, dim=1) == labels).float().mean()
+        joints = self.forward(pc)
+        joints = joints * (joint_upper_range - joint_lower_range) + joint_lower_range
+        loss = F.mse_loss(joints, labels)
+        acc = (torch.sum(torch.abs(joints - labels) < 0.1, dim=-1) == 23).float().mean()
 
         return dict(val_loss=loss, val_acc=acc)
 
@@ -122,16 +124,11 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
                 d_utils.PointcloudToTensor(),
                 d_utils.PointcloudScale(),
                 d_utils.PointcloudRotate(),
-                d_utils.PointcloudRotatePerturbation(),
+                # d_utils.PointcloudRotatePerturbation(),
                 d_utils.PointcloudTranslate(),
-                d_utils.PointcloudJitter(),
-                d_utils.PointcloudRandomInputDropout(),
+                # d_utils.PointcloudJitter(),
+                # d_utils.PointcloudRandomInputDropout(),
             ]
         )
-
-        self.train_dset = HandPointDataset(
-            self.hparams["num_points"], transforms=train_transforms, train=True
-        )
-        self.val_dset = HandPointDataset(
-            self.hparams["num_points"], transforms=None, train=False
-        )
+        self.train_dset = HandPointsDataset(transforms=train_transforms, train=True)
+        self.val_dset = HandPointsDataset(transforms=None, train=False)
