@@ -13,9 +13,9 @@ from pointnet2_ops.pointnet2_modules import PointnetFPModule, PointnetSAModule
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-import Robot_conductor.dataset.data_utils as d_utils
-from Robot_conductor.dataset import HandPointsDataset
-from Robot_conductor.model.pointnet2_ssg_cls import PointNet2ClassificationSSG
+import dataset.data_utils as d_utils
+from dataset import HandPointsDataset
+from model.pointnet2_ssg_cls import PointNet2ClassificationSSG
 
 
 joint_upper_range = torch.tensor([0.349, 1.571, 1.571, 1.571, 0.785, 0.349, 1.571, 1.571,

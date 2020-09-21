@@ -6,7 +6,7 @@ __version__ = "0.0.1"
 
 
 setup(
-    name="Robot_conductor",
+    name="RobotConductor",
     version=__version__,
     author="Shuang Li",
     author_email="sli@informatik.uni-hamburg.de",
