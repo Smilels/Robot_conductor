@@ -1,10 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Author     : Shuang Li
-# E-mail     : sli@informatik.uni-hamburg.de
-# Description: pointclouds augmentation functions
-# Date       : 17/09/2020: 17:12
-# File Name  : data_utils
 import numpy as np
 import torch
 
