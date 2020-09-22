@@ -1,0 +1,2 @@
+from model.pointnet2_ssg_cls import PointNet2ClassificationSSG
+from model.pointnet2_ssg_handjoints import PointNet2HandJointSSG

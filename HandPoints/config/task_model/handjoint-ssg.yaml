@@ -1,0 +1,3 @@
+task_model:
+    class: HandPoints.model.PointNet2HandJointSSG
+    name: handjoint-ssg

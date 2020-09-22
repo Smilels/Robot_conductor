@@ -1,3 +1,0 @@
-task_model:
-    class: RobotConductor.model.PointNet2HandJointSSG
-    name: sem-ssg
