@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   sensor_msgs
+  pr2_mechanism_msgs
   pr2_controllers_msgs
   actionlib
 )

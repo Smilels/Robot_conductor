@@ -1,0 +1,4 @@
+<launch>
+    <rosparam file="$(find tams_pr2_controller_configuration)/pr2_joint_group_velocity_controllers.yaml" command="load"/>
+    <node pkg="hand_tracking" name="arm_head_preparation" type="arm_head_preparation" output="screen" />
+</launch>
