@@ -58,6 +58,7 @@ int main(int argc, char **argv)
     while (ros::ok())
     {
         std::cout << "------------------Choose one of the following action------------------" << std::endl;
+        std::cout << "Tips: To run hand_tracking demo, Trixi grow tall + press 1 + press 2 + press 3" << std::endl;
         std::cout  << "Press 1: Head On please" << std::endl;
         std::cout << "Press 2: Move left arm to starting pose please" << std::endl;
         std::cout << "Press 3: Left arm from trajectory control to velocity control" << std::endl;
