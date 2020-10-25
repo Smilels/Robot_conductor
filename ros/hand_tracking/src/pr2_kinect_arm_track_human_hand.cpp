@@ -268,16 +268,16 @@ void HandTrack::controller_vel_method(const std::vector<double> &joint_values, c
       // shoulder_lift_joint
       arm_joints_vel.data[1] = clip(joint_diff[1], 2.1, -2.1);
       // upper_arm_roll_joint
-      // arm_joints_vel.data[2] = clip(joint_diff[2], 3.27, -3.27);
+      arm_joints_vel.data[2] = clip(joint_diff[2], 3.27, -3.27);
       // elbow_flex_joint
-      arm_joints_vel.data[3] = clip(joint_diff[3], 3.3, -3.3);
+      // arm_joints_vel.data[3] = clip(joint_diff[3], 3.3, -3.3);
       // forearm_roll_joint
-      // arm_joints_vel.data[4] = clip( joint_diff[4], 3.6, -3.6);
+       arm_joints_vel.data[4] = clip( joint_diff[4], 3.6, -3.6);
       // wrist_flex_joint
-      arm_joints_vel.data[5] = clip(joint_diff[5], 3.1, -3.1);
+       arm_joints_vel.data[5] = clip(joint_diff[5], 3.1, -3.1);
       // wrist_roll_joint
-      // arm_joints_vel.data[6] = clip(joint_diff[6], 3.6, -3.6);
-      //arm_vel_pub_.publish(arm_joints_vel);
+      arm_joints_vel.data[6] = clip(joint_diff[6], 3.6, -3.6);
+      arm_vel_pub_.publish(arm_joints_vel);
       previous_joint_values = joint_values;
     }
 }
