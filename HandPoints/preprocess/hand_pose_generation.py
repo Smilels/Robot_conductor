@@ -42,7 +42,7 @@ def depth2pc(depth):
 def main():
     """crop human hand images to 100*100"""
     base_path = "../data/"
-    DataFile = open(base_path + "bighand2017_test_annotation.txt", "r")
+    DataFile = open(base_path + "Training_Annotation.txt", "r")
     csvSum = open(base_path + "shadow_pose2017.csv", "w")
 
     lines = DataFile.read().splitlines()
@@ -131,7 +131,7 @@ def main():
                 hand_frame_vis.rotate(np.linalg.inv(hand_frame.T), center=(0, 0, 0))
 
             if save:
-                pose_bbx = [keypoints[0], hand_frame]
+                pose_bbx = np.hstack([keypoints[0], hand_frame]).tolist()
                 writer.writerow(pose_bbx)
 
     csvSum.close()
