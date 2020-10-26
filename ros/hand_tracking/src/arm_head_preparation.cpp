@@ -81,7 +81,7 @@ int main(int argc, char **argv)
         }
         case '2':{
             moveit::planning_interface::MoveGroupInterface *left_arm_mgi_ = new moveit::planning_interface::MoveGroupInterface("left_arm");
-            std::vector<double> left_arm_start_position{0.0, 0.63, 0.2, -0.15, 0.0, -0.31, -0.0};
+            std::vector<double> left_arm_start_position{0.700264526085, 1.00423158756, -0.00312039265708, -0.999606550444, 0.074092851994, -0.0904382465926, 0.137149668996};
             left_arm_mgi_->setJointValueTarget(left_arm_start_position);
             left_arm_mgi_->move();
             std::cout << "Left arm pose is done" << std::endl;
