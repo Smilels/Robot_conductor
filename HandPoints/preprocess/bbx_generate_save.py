@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import cv2
 import open3d as o3d
 from scipy.spatial.transform import Rotation as R
+from utils import depth2pc
 
 
 bbx_2d = False
@@ -23,20 +24,6 @@ focalLengthY = 475.065857
 
 centerX = 315.944855
 centerY = 245.287079
-
-
-def depth2pc(depth):
-    points = []
-    for v in range(depth.shape[0]):
-        for u in range(depth.shape[1]):
-            Z = int(depth[v, u])
-            if Z == 0:
-                continue
-            X = int((u - centerX) * Z / focalLengthX)
-            Y = int((v - centerY) * Z / focalLengthY)
-            points.append([X, Y, Z])
-    points_np = np.array(points)
-    return points_np
 
 
 def main():
