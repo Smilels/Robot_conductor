@@ -336,7 +336,7 @@ if __name__ == '__main__':
     csvSum = open(base_path + "shadow_hand_mapping_pose_file.csv", "w")
     writer = csv.writer(csvSum)
 
-    for i in range(0, len(map_loader.framelist)):
+    for i in range(79, len(map_loader.framelist)):
         frame, tip_keys, pip_keys, pip_mcp, tip_pip, local_points,  shadow_points, wrist_pos, local_frame = map_loader.map(i)
         # save key
         result = np.hstack([frame, tip_keys[0], tip_keys[1],
@@ -346,10 +346,10 @@ if __name__ == '__main__':
                   pip_mcp[4], tip_pip[0], wrist_pos, local_frame]).tolist()
         # writer.writerow(result)
 
-        # mlab.figure(bgcolor=(1, 1, 1), size=(1280, 960))
-        # show_hand(shadow_points, 'shadow')
-        # # show_hand(local_points, 'human')
-        # # mlab.savefig(filename="../data/tams_handshape/" + frame)
-        # # mlab.close()
-        # mlab.show()
+        mlab.figure(bgcolor=(1, 1, 1), size=(1280, 960))
+        show_hand(shadow_points, 'shadow')
+        # show_hand(local_points, 'human')
+        # mlab.savefig(filename="../data/tams_handshape/" + frame)
+        # mlab.close()
+        mlab.show()
     csvSum.close()

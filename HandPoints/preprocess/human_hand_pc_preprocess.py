@@ -14,7 +14,7 @@ import open3d as o3d
 from scipy.spatial.transform import Rotation as R
 from IPython import embed
 import multiprocessing as mp
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization, farthest_point_sampling_fast
 
 
 save_points = True
@@ -37,7 +37,7 @@ local_frame_path = base_path + "local_frame/"
 mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
 
-def get_points(line):
+def get_human_points(line):
     # 1 read groundtruth and image
     frame = line.split(' ')[0].replace("\t", "")
     # print(frame)
@@ -148,14 +148,11 @@ def get_points(line):
 
 
 def main():
-    """save hand points"""
     DataFile = open(base_path + "Training_Annotation.txt", "r")
     lines = DataFile.read().splitlines()
-    # camera center coordinates and focal length
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
-    pool.map(get_points, lines)
-
+    pool.map(get_human_points, lines)
     DataFile.close()
 
 
