@@ -11,7 +11,7 @@ import os
 import cv2
 import open3d as o3d
 import math
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization, FPS
 import glob
 import numpy as np
 import multiprocessing as mp
@@ -68,6 +68,10 @@ def get_shadow_points(item):
         # 3 downsampling
         hand_points_pca_sampled, rand_ind = down_sample(hand_points_pca, SAMPLE_NUM)
         print("size of hand points after downsampling is: ", len(hand_points_pca_sampled))
+
+        # 4 FPS
+        hand_points_pca_sampled = FPS(hand_points_pca_sampled, 512)
+        show_points(hand_points_pca_sampled)
 
         # 4 compute surface normal
         normals_pca = get_normal(hand_points_pca)

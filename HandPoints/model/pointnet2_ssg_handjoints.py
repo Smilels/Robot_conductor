@@ -18,6 +18,7 @@ from HandPoints.dataset import HandPointsDataset
 from HandPoints.model.pointnet2_ssg_cls import PointNet2ClassificationSSG
 from IPython import embed
 
+
 class PointNet2HandJointSSG(PointNet2ClassificationSSG):
     def _build_model(self):
         self.SA_modules = nn.ModuleList()
