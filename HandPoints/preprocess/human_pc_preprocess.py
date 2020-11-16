@@ -28,8 +28,8 @@ centerY = 245.287079
 DOWN_SAMPLE_NUM = 2048
 FPS_SAMPLE_NUM = 512
 
-base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
-img_path = base_path + "Human_label/human_full_test/"
+base_path = "./data/"
+img_path = base_path + "images/"
 points_path = base_path + "points_human/"
 mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
@@ -37,7 +37,7 @@ mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1
 def get_human_points(line):
     # 1 read the groundtruth and the image
     frame = line.split(' ')[0].replace("\t", "")
-    # print(frame)
+    print(frame)
 
     # image path depends on the location of your training dataset
     try:
@@ -61,7 +61,7 @@ def get_human_points(line):
                                   (points_raw[:, 1] > y_min_max[0]) & (points_raw[:, 1] < y_min_max[1]) &
                                   (points_raw[:, 2] > z_min_max[0]) & (points_raw[:, 2] < z_min_max[1]))]
     if len(points) < 300:
-        print("hand points is %d, which is less than 300. Maybe it's a broken image" % len(points))
+        print("%s hand points is %d, which is less than 300. Maybe it's a broken image" % (frame, len(points)))
         return
 
     # 3 PCA rotation
@@ -127,10 +127,11 @@ def get_human_points(line):
 
 
 def main():
-    datafile = open(base_path + "Human_label/text_annotation.txt", "r")
+    datafile = open(base_path + "groundtruth/Training_Annotation.txt", "r")
     lines = datafile.read().splitlines()
+    lines.sort()
     cores = mp.cpu_count()
-    # pool = mp.Pool(processes=cores)
+    pool = mp.Pool(processes=cores)
     pool.map(get_human_points, lines)
     # for line in lines:
     #     get_human_points(line)
