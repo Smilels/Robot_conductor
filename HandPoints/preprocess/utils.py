@@ -127,19 +127,19 @@ def FPS_idx(points, K):
 
 
 def show_paired_depth_images():
-    base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
+    from random import shuffle
+    base_path = "/data/shuang_data/Bighand2017/"
     file_list = glob.glob(base_path+'depth_shadow/*.png')
-    file_list.sort()
-    human_file_list = glob.glob(base_path+'Human_label/human_full_test/*.png')
-    human_file_list.sort()
+    # file_list.sort()
+    shuffle(file_list)
     file_number = len(file_list)
 
-    for i in range(880, file_number):
+    for i in range(file_number):
         img = cv2.imread(file_list[i], cv2.IMREAD_ANYDEPTH)
         img[img == 1000] = 0
         if img is None:
                 continue
-        human_img = cv2.imread(base_path+'Human_label/human_full_test/'+file_list[i][-20:-4]+'.png', cv2.IMREAD_ANYDEPTH)
+        human_img = cv2.imread(base_path+'images/'+file_list[i][-20:-4]+'.png', cv2.IMREAD_ANYDEPTH)
 
         com = np.hstack([img, human_img])
         n = cv2.normalize(com, com, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
@@ -154,14 +154,14 @@ def show_paired_depth_images():
 
 
 def consequent_same_image_check():
-    base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
+    base_path = "/data/shuang_data/Bighand2017/"
     file_list = glob.glob(base_path+'depth_shadow/*.png')
     file_list.sort()
     file_number = len(file_list)
-    for i in range(300):
+    for i in range(file_number-1):
      img = cv2.imread(file_list[i], cv2.IMREAD_ANYDEPTH)
      img_ = cv2.imread(file_list[i+1], cv2.IMREAD_ANYDEPTH)
-     if (img==img_).all():
+     if (img == img_).all():
         print(file_list[i+1][-20:])
 
 
