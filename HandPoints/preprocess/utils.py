@@ -13,6 +13,7 @@ from IPython import embed
 import os, glob
 import cv2
 
+
 def depth2pc(depth, centerX, centerY, focalLengthX, focalLengthY):
     points = []
     for v in range(depth.shape[0]):
@@ -59,20 +60,18 @@ def get_normal(points, radius=0.1, max_nn=30):
     return pcd_norm
 
 
-def normalization_unit(hand_points_pca, hand_points_pca_sampled, SAMPLE_NUM):
-    min = hand_points_pca_sampled.min(axis=0)
-    max = hand_points_pca_sampled.max(axis=0)
+def normalization_unit(hand_points_pca_sampled):
+    offset = np.mean(hand_points_pca_sampled, axis=0)
+    hand_points_normalized_sampled = hand_points_pca_sampled - offset
+
+    min = hand_points_normalized_sampled.min(axis=0)
+    max = hand_points_normalized_sampled.max(axis=0)
     bb3d_x_len = max-min
     scale = 1.2
     max_bb3d_len = scale * np.max(bb3d_x_len)
     # max_bb3d_len = scale * bb3d_x_len[0]
-    hand_points_normalized_sampled = hand_points_pca_sampled / max_bb3d_len
-    if len(hand_points_pca) < SAMPLE_NUM:
-        offset = np.mean(hand_points_pca) / max_bb3d_len
-    else:
-        offset = np.mean(hand_points_normalized_sampled)
-    hand_points_normalized_sampled = hand_points_normalized_sampled - offset
-    return hand_points_normalized_sampled
+    hand_points_normalized_sampled /= max_bb3d_len
+    return hand_points_normalized_sampled, max_bb3d_len, offset
 
 
 def normalization_view(hand_points_pca, hand_points_pca_sampled, SAMPLE_NUM):
@@ -93,37 +92,7 @@ def normalization_view(hand_points_pca, hand_points_pca_sampled, SAMPLE_NUM):
 
 def normalization_mean(hand_points_pca_sampled):
     hand_points_normalized_sampled = hand_points_pca_sampled - hand_points_pca_sampled.mean(axis=0)
-    return hand_points_normalized_sampled
-
-
-def farthest_point_sampling_fast(points, sample_num):
-    hand_points = points
-    # hand_points: N*3
-    pc_num = hand_points.shape[0]
-
-    if pc_num <= sample_num:
-        # if pc_num <= sample_num, expand it to reach the amount requirement
-        sampled_idx_part1 = np.arange(pc_num)
-        sampled_idx_part2 = np.random.choice(pc_num, size=sample_num - pc_num, replace=False)
-        sampled_idx = np.concatenate((sampled_idx_part1, sampled_idx_part2))
-    else:
-        sampled_idx = np.zeros(sample_num).astype(np.int32)
-        farthest = np.random.randint(pc_num)
-        min_dist = np.ones(pc_num) * 1e10
-
-        for idx in range(sample_num):
-            sampled_idx[idx] = farthest
-            diff = hand_points - hand_points[sampled_idx[idx]].reshape(1, 3)
-            dist = np.sum(np.multiply(diff, diff), axis=1)
-
-            # update distances to record the minimum distance of each point
-            # in the sample from all existing sample points
-            # and not the sample points themselves
-            mask = (min_dist > dist) & (min_dist > 1e-8)
-            min_dist[mask] = dist[mask]
-            farthest = np.argmax(min_dist)
-
-    return np.unique(sampled_idx)
+    return hand_points_normalized_sampled, hand_points_pca_sampled.mean(axis=0)
 
 
 def calc_distances(p0, points):
@@ -139,6 +108,22 @@ def FPS(points, K):
         farthest_pts[i] = pts[np.argmax(distances)]
         distances = np.minimum(distances, calc_distances(farthest_pts[i], pts))
     return farthest_pts
+
+
+def FPS_idx(points, K):
+    pts = points.copy()
+    farthest_pts = np.zeros((K, 3))
+    farthest_pts_idx = np.zeros(K)
+    upper_bound = pts.shape[0] - 1
+    first_idx = np.random.randint(0, upper_bound)
+    farthest_pts[0] = pts[first_idx]
+    farthest_pts_idx[0] = first_idx
+    distances = calc_distances(farthest_pts[0], pts)
+    for i in range(1, K):
+        farthest_pts[i] = pts[np.argmax(distances)]
+        farthest_pts_idx[i] = np.argmax(distances)
+        distances = np.minimum(distances, calc_distances(farthest_pts[i], pts))
+    return farthest_pts, farthest_pts_idx.astype(np.int64)
 
 
 def show_paired_depth_images():
@@ -184,4 +169,5 @@ if __name__ == "__main__":
     # N, K = 80, 40
     # pts = np.random.random_sample((N, 2))
     # farthest_pts = FPS(pts, K)
-    show_paired_depth_images()
+    # show_paired_depth_images()
+    pass

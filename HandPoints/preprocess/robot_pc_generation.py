@@ -11,20 +11,22 @@ import os
 import cv2
 import open3d as o3d
 import math
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization, FPS
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS, FPS_idx
 import glob
 import numpy as np
 import multiprocessing as mp
+from IPython import embed
 
 
-save_points = True
-show_points = True
-SAMPLE_NUM = 1024
+save_points = 1
+vis_points = 0
+DOWN_SAMPLE_NUM = 2048
+FPS_SAMPLE_NUM = 512
 
 image_width = 640
 image_height = 480
-near = 0.1
-max_depth = 5.0
+near = 0.1  * 1000
+max_depth = 5.0 * 1000
 fov_y = 1.02974
 e = 1.0 / math.tan(fov_y / 2)
 # focal_length can be calculated as f = max(u_res, v_res) / tan(FoV/2),
@@ -49,41 +51,46 @@ def show_points(hand_points):
 def get_shadow_points(item):
     print(item[-19::])
     img = cv2.imread(item, cv2.IMREAD_ANYDEPTH)
-    if show_points:
-        hand_points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
-        show_points(hand_points)
+    if vis_points:
+        points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
+        print("ddd")
+        show_points(points)
 
     if save_points:
         # 1 get hand points
         img[img == 1000] = 0
-        hand_points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
+        points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
         # print("size of hand point is: ", len(hand_points))
 
-        if len(hand_points) < 300:
-            print("hand points is %d, isless than 300, maybe it's a broken image" % len(hand_points))
+        if len(points) < 300:
+            print("hand points is %d, isless than 300, maybe it's a broken image" % len(points))
             return
         # 2 PCA rotation
-        hand_points_pca = pca_rotation(hand_points)
+        points_pca = pca_rotation(points)
 
         # 3 downsampling
-        hand_points_pca_sampled, rand_ind = down_sample(hand_points_pca, SAMPLE_NUM)
-        print("size of hand points after downsampling is: ", len(hand_points_pca_sampled))
+        points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
+        print("size of hand points after downsampling is: ", len(points_pca_sampled))
 
         # 4 FPS
-        hand_points_pca_sampled = FPS(hand_points_pca_sampled, 512)
-        show_points(hand_points_pca_sampled)
+        points_pca_fps_sampled, farthest_pts_idx = FPS_idx(points_pca_sampled, FPS_SAMPLE_NUM)
+        # show_points(hand_points_pca_sampled)
 
-        # 4 compute surface normal
-        normals_pca = get_normal(hand_points_pca)
+        # 5 compute surface normal
+        normals_pca = get_normal(points_pca)
         normals_pca_sampled = normals_pca[rand_ind]
+        normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
 
-        # 5 normalize point cloud
-        hand_points_normalized_sampled = normalization(hand_points_pca, hand_points_pca_sampled, SAMPLE_NUM)
-        show_points(hand_points_normalized_sampled)
+        # 6 normalize point cloud
+        points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+        # show_points(hand_points_normalized_sampled)
 
+        embed()
         if not os.path.exists(points_path):
             os.makedirs(points_path)
-        np.save(os.path.join(points_path, item[-19:-4] + '.npy'), hand_points_normalized_sampled)
+        # np.save(os.path.join(points_path, item[-19:-4] + '.npy'), hand_points_normalized_sampled)
+        data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset])
+        np.save(os.path.join(points_path, item[-19:-4] + '.npy'), data)
 
 
 def main():
