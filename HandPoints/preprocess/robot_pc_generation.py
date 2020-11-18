@@ -4,10 +4,10 @@
 # E-mail     : sli@informatik.uni-hamburg.de
 # Description: bighand depth to normalized pointclouds
 # Date       : 15/09/2020: 17:41
-# File Name  : hand_preprocess.py
+# File Name  : robot_pc_preprocess.py
 
 
-import os
+import os, sys
 import cv2
 import open3d as o3d
 import math
@@ -18,83 +18,114 @@ import multiprocessing as mp
 from IPython import embed
 
 
-save_points = 1
+save_norm = 0
 vis_points = 0
 DOWN_SAMPLE_NUM = 2048
 FPS_SAMPLE_NUM = 512
 
 image_width = 640
 image_height = 480
-near = 0.1  * 1000
-max_depth = 5.0 * 1000
+near = 0.1 * 1000
+max_depth = 2.0 * 1000
 fov_y = 1.02974
 e = 1.0 / math.tan(fov_y / 2)
-# focal_length can be calculated as f = max(u_res, v_res) / tan(FoV/2),
+# focal_length can be calculated as f = max(u_res, v_res) / (2*tan(fov/2),
 # where FoV is the perspective angle (from the vision sensor properties)
-focalLengthX = e * image_width
-focalLengthY = e * image_width
+focalLengthX = e * image_width / 2.0
+focalLengthY = e * image_width / 2.0
 
-centerX = image_width/2
-centerY = image_height/2
-
-root_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
-image_path = os.path.join(root_path, "depth_shadow")
-points_path = os.path.join(root_path, "points_shadow")
+centerX = image_width/2.0
+centerY = image_height/2.0
 
 
-def show_points(hand_points):
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(hand_points)
-    o3d.visualization.draw_geometries([pcd])
+if sys. argv[1] == "tams108":
+    base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
+    img_path = os.path.join(base_path, "depth_shadow")
+    points_path = os.path.join(base_path, "points_shadow")
+elif sys. argv[1] == "server":
+    base_path = "./data/"
+    img_path = base_path + "images/"
+    points_path = base_path + "points_no_pca/points_shadow/"
+    vis_points = 0
 
 
 def get_shadow_points(item):
     print(item[-19::])
     img = cv2.imread(item, cv2.IMREAD_ANYDEPTH)
+    # if vis_points:
+    #     points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
+    #     show_points(points)
+
+    # 1 get hand points
+    img[img == 1000] = 0
+    points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
+
+    if len(points) < 300:
+        print("%s hand points is %d, which is less than 300. Maybe it's a broken image" % (item[-19::], len(points)))
+        return
+
+    # 2 PCA rotation
+    # points_pca = pca_rotation(points)
+    points_pca = points
+
+    # 3 downsampling
+    points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
+
+    # 4 FPS
+    points_pca_fps_sampled, farthest_pts_idx = FPS_idx(points_pca_sampled, FPS_SAMPLE_NUM)
+
+    # 5 compute surface normal
+    normals_pca = get_normal(points_pca)
+    normals_pca_sampled = normals_pca[rand_ind]
+    normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
+
+    # 6 normalize point cloud
+    points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+
     if vis_points:
-        points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
-        print("ddd")
-        show_points(points)
+        pcd = o3d.geometry.PointCloud()
+        pcd_hand = o3d.geometry.PointCloud()
+        pcd_pca = o3d.geometry.PointCloud()
+        pcd_pca_sample = o3d.geometry.PointCloud()
+        pcd_key = o3d.geometry.PointCloud()
+        pcd_normalized = o3d.geometry.PointCloud()
+        pcd_fps_sample = o3d.geometry.PointCloud()
 
-    if save_points:
-        # 1 get hand points
-        img[img == 1000] = 0
-        points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
-        # print("size of hand point is: ", len(hand_points))
+        # the original hand points extracted from the whole image
+        pcd_hand.points = o3d.utility.Vector3dVector(points)
+        pcd_hand.paint_uniform_color([0.9, 0.1, 0.1])  # red
+        # points after pca transformation
+        pcd_pca.points = o3d.utility.Vector3dVector(points_pca)
+        pcd_pca.paint_uniform_color([0.1, 0.9, 0.5])  # green
+        # random downsampling of pca points
+        pcd_pca_sample.points = o3d.utility.Vector3dVector(points_pca_sampled)
+        pcd_pca_sample.paint_uniform_color([0.1, 0.1, 0.7])  # blue
+        # fps sampled points
+        pcd_fps_sample.points = o3d.utility.Vector3dVector(points_pca_fps_sampled + np.array([200, 0, 0]))
+        pcd_fps_sample.paint_uniform_color([0.1, 0.1, 0.7])  # green
 
-        if len(points) < 300:
-            print("hand points is %d, isless than 300, maybe it's a broken image" % len(points))
-            return
-        # 2 PCA rotation
-        points_pca = pca_rotation(points)
+        # the values of the normalized points are in [-0.5,0.5],
+        # so they cannot visualize together with other non-normalized points)
+        pcd_normalized.points = o3d.utility.Vector3dVector(points_normalized)
 
-        # 3 downsampling
-        points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
-        print("size of hand points after downsampling is: ", len(points_pca_sampled))
+        # the world frame
+        world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
+            size=150, origin=[0, 0, 0])
 
-        # 4 FPS
-        points_pca_fps_sampled, farthest_pts_idx = FPS_idx(points_pca_sampled, FPS_SAMPLE_NUM)
-        # show_points(hand_points_pca_sampled)
+        o3d.visualization.draw_geometries([pcd_hand], point_show_normal=False)
 
-        # 5 compute surface normal
-        normals_pca = get_normal(points_pca)
-        normals_pca_sampled = normals_pca[rand_ind]
-        normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
-
-        # 6 normalize point cloud
-        points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
-        # show_points(hand_points_normalized_sampled)
-
-        embed()
-        if not os.path.exists(points_path):
-            os.makedirs(points_path)
-        # np.save(os.path.join(points_path, item[-19:-4] + '.npy'), hand_points_normalized_sampled)
-        data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset])
-        np.save(os.path.join(points_path, item[-19:-4] + '.npy'), data)
+    if not os.path.exists(points_path):
+        os.makedirs(points_path)
+    if save_norm:
+        data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset],
+                        dtype=object)
+        np.save(os.path.join(points_path, item[-19:-4] + '_points.npy'), data)
+    else:
+        np.save(os.path.join(points_path, item[-19:-4] + '_points.npy'), points_normalized)
 
 
 def main():
-    image_lists = glob.glob(image_path + "/*.png")
+    image_lists = glob.glob(img_path + "/*.png")
     image_lists.sort()
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)

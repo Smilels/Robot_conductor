@@ -4,20 +4,19 @@
 # E-mail     : sli@informatik.uni-hamburg.de
 # Description: bighand depth to normalized pointclouds
 # Date       : 15/09/2020: 17:41
-# File Name  : hand_preprocess.py
+# File Name  : human_pc_preprocess.py
 
 
 import numpy as np
-import os
+import os, sys
 import cv2
 import open3d as o3d
-from scipy.spatial.transform import Rotation as R
 from IPython import embed
 import multiprocessing as mp
 from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS, FPS_idx
 
 
-save_points = True
+save_norm = False
 show_bbx = 0
 
 focalLengthX = 475.065948
@@ -28,9 +27,17 @@ centerY = 245.287079
 DOWN_SAMPLE_NUM = 2048
 FPS_SAMPLE_NUM = 512
 
-base_path = "./data/"
-img_path = base_path + "images/"
-points_path = base_path + "points_human/"
+
+if sys. argv[1] == "tams108":
+    base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
+    img_path = os.path.join(base_path, "Human_label/human_full_test/")
+    points_path = os.path.join(base_path, "points_human/")
+elif sys. argv[1] == "server":
+    base_path = "./data/"
+    img_path = base_path + "images/"
+    points_path = base_path + "points_no_pca/points_human/"
+    show_bbx = 0
+
 mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
 
 
@@ -65,7 +72,8 @@ def get_human_points(line):
         return
 
     # 3 PCA rotation
-    points_pca = pca_rotation(points)
+    # points_pca = pca_rotation(points)
+    points_pca = points
 
     # 4 downsampling
     points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
@@ -116,18 +124,21 @@ def get_human_points(line):
         world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[0, 0, 0])
 
-        o3d.visualization.draw_geometries([world_frame_vis, pcd_normalized], point_show_normal=False)
+        o3d.visualization.draw_geometries([pcd_hand], point_show_normal=False)
 
-    if save_points:
-        if not os.path.exists(points_path):
-            os.makedirs(points_path)
+    if not os.path.exists(points_path):
+        os.makedirs(points_path)
+    if save_norm:
         data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset],
                         dtype=object)
         np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), data)
+    else:
+        np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), points_normalized)
 
 
 def main():
-    datafile = open(base_path + "groundtruth/Training_Annotation.txt", "r")
+    # datafile = open(base_path + "groundtruth/Training_Annotation.txt", "r")
+    datafile = open(base_path + "Human_label/text_annotation.txt", "r")
     lines = datafile.read().splitlines()
     lines.sort()
     cores = mp.cpu_count()
