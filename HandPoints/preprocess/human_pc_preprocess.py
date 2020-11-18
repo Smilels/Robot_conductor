@@ -13,11 +13,12 @@ import cv2
 import open3d as o3d
 from IPython import embed
 import multiprocessing as mp
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS, FPS_idx
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx
 
 
 save_norm = False
 show_bbx = 0
+do_pca = 1
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -31,10 +32,12 @@ FPS_SAMPLE_NUM = 512
 if sys. argv[1] == "tams108":
     base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
     img_path = os.path.join(base_path, "Human_label/human_full_test/")
+    tf_path = os.path.join(base_path, "human_pca_tf/")
     points_path = os.path.join(base_path, "points_human/")
 elif sys. argv[1] == "server":
     base_path = "./data/"
     img_path = base_path + "images/"
+    tf_path = os.path.join(base_path, "human_pca_tf/")
     points_path = base_path + "points_no_pca/points_human/"
     show_bbx = 0
 
@@ -72,8 +75,10 @@ def get_human_points(line):
         return
 
     # 3 PCA rotation
-    # points_pca = pca_rotation(points)
-    points_pca = points
+    if do_pca:
+        points_pca, pc_transfrom = pca_rotation(points)
+    else:
+        points_pca = points
 
     # 4 downsampling
     points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
@@ -131,14 +136,19 @@ def get_human_points(line):
     if save_norm:
         data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset],
                         dtype=object)
-        np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), data)
+        np.save(os.path.join(points_path, frame[:-4] + '.npy'), data)
     else:
-        np.save(os.path.join(points_path, frame[:-4] + '_points.npy'), points_normalized)
+        np.save(os.path.join(points_path, frame[:-4] + '.npy'), points_normalized)
+
+    if do_pca:
+        if not os.path.exists(tf_path):
+            os.makedirs(tf_path)
+        np.save(os.path.join(tf_path, frame[:-4] + '.npy'), pc_transfrom)
 
 
 def main():
-    # datafile = open(base_path + "groundtruth/Training_Annotation.txt", "r")
-    datafile = open(base_path + "Human_label/text_annotation.txt", "r")
+    datafile = open(base_path + "groundtruth/Training_Annotation.txt", "r")
+    # datafile = open(base_path + "Human_label/text_annotation.txt", "r")
     lines = datafile.read().splitlines()
     lines.sort()
     cores = mp.cpu_count()

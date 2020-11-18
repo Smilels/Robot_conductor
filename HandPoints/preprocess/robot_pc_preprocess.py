@@ -11,7 +11,7 @@ import os, sys
 import cv2
 import open3d as o3d
 import math
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS, FPS_idx
+from utils import depth2pc, robot_pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx
 import glob
 import numpy as np
 import multiprocessing as mp
@@ -20,6 +20,8 @@ from IPython import embed
 
 save_norm = 0
 vis_points = 0
+do_pca = 1
+
 DOWN_SAMPLE_NUM = 2048
 FPS_SAMPLE_NUM = 512
 
@@ -40,21 +42,36 @@ centerY = image_height/2.0
 
 if sys. argv[1] == "tams108":
     base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
-    img_path = os.path.join(base_path, "depth_shadow")
-    points_path = os.path.join(base_path, "points_shadow")
+    img_path = os.path.join(base_path, "depth_shadow/")
+    tf_path = os.path.join(base_path, "human_pca_tf/")
+    points_path = os.path.join(base_path, "points_shadow/")
 elif sys. argv[1] == "server":
     base_path = "./data/"
     img_path = base_path + "images/"
+    tf_path = base_path + "human_pca_tf/"
     points_path = base_path + "points_no_pca/points_shadow/"
     vis_points = 0
+
+if do_pca:
+    tf_lists = os.listdir(tf_path)
+    tf_lists.sort()
+    f_index = {}
+    for ind, line in enumerate(tf_lists):
+        f_index[line[:-4]] = ind
 
 
 def get_shadow_points(item):
     print(item[-19::])
+    # embed()
+    if do_pca:
+        try:
+            line = f_index[item[-19:-4]]
+            pc_transfrom = np.load(tf_path + item[-19:-4] + ".npy")
+        except:
+            print("%s does not have reasonable human data" % (item[-19::]))
+            return
+
     img = cv2.imread(item, cv2.IMREAD_ANYDEPTH)
-    # if vis_points:
-    #     points = depth2pc(img, centerX, centerY, focalLengthX, focalLengthY)
-    #     show_points(points)
 
     # 1 get hand points
     img[img == 1000] = 0
@@ -65,8 +82,10 @@ def get_shadow_points(item):
         return
 
     # 2 PCA rotation
-    # points_pca = pca_rotation(points)
-    points_pca = points
+    if do_pca:
+        points_pca = robot_pca_rotation(points, pc_transfrom)
+    else:
+        points_pca = points
 
     # 3 downsampling
     points_pca_sampled, rand_ind = down_sample(points_pca, DOWN_SAMPLE_NUM)
@@ -119,9 +138,9 @@ def get_shadow_points(item):
     if save_norm:
         data = np.array([points_normalized, normals_pca_fps_sampled, max_bb3d_len, offset],
                         dtype=object)
-        np.save(os.path.join(points_path, item[-19:-4] + '_points.npy'), data)
+        np.save(os.path.join(points_path, item[-19:-4] + '.npy'), data)
     else:
-        np.save(os.path.join(points_path, item[-19:-4] + '_points.npy'), points_normalized)
+        np.save(os.path.join(points_path, item[-19:-4] + '.npy'), points_normalized)
 
 
 def main():
@@ -129,9 +148,9 @@ def main():
     image_lists.sort()
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
-    # pool.map(get_shadow_points, image_lists)
-    for item in image_lists:
-        get_shadow_points(item)
+    pool.map(get_shadow_points, image_lists)
+    # for item in image_lists:
+    #     get_shadow_points(item)
 
 
 if __name__ == '__main__':

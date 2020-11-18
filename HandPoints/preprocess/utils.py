@@ -30,10 +30,17 @@ def depth2pc(depth, centerX, centerY, focalLengthX, focalLengthY):
 
 def pca_rotation(points):
     hand_points = points.copy()
-    hand_points_norm = hand_points - hand_points.mean(axis=0)
+    hand_points_mean = hand_points.mean(axis=0)
     pca = PCA(n_components=3, svd_solver='full')
-    pca.fit(hand_points_norm)
-    hand_points_pca = pca.transform(hand_points_norm) + hand_points.mean(axis=0)
+    pca.fit(hand_points)
+    hand_points_pca = pca.transform(hand_points) + hand_points_mean
+    return hand_points_pca, pca.components_
+
+
+def robot_pca_rotation(points, transform):
+    hand_points = points.copy()
+    hand_points_mean = hand_points.mean(axis=0)
+    hand_points_pca = np.dot(hand_points, transform.T) + hand_points_mean
     return hand_points_pca
 
 
@@ -172,19 +179,22 @@ def human_shadow_points_check():
     base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
     points_lists = glob.glob(base_path+'points_human/*.npy')
     points_lists.sort()
-    print(len(points_lists))
-    for item in points_lists[34:]:
-        print(item)
+    # print(len(points_lists))
+    for item in points_lists[65:]:
+        print(item[-19::])
         points_human = np.load(item)
         pcd_human.points = o3d.utility.Vector3dVector(points_human)
         pcd_human.paint_uniform_color([0.9, 0.1, 0.1])  # red
 
-        points_shadow = np.load("/homeL/shuang/ros_workspace/tele_ws/src/dataset/points_shadow/" + item[-26::])
-        pcd_shadow.points = o3d.utility.Vector3dVector(points_shadow + np.array([0, 0, 0]))
-        pcd_shadow.paint_uniform_color([0.1, 0.1, 0.7])  # blue
-        world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
-            size=1, origin=[0, 0, 0])
-        o3d.visualization.draw_geometries([world_frame_vis, pcd_human, pcd_shadow])
+        try:
+            points_shadow = np.load("/homeL/shuang/ros_workspace/tele_ws/src/dataset/points_shadow/" + item[-19::])
+            pcd_shadow.points = o3d.utility.Vector3dVector(points_shadow + np.array([0, 0, 0]))
+            pcd_shadow.paint_uniform_color([0.1, 0.1, 0.7])  # blue
+            world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
+                size=1, origin=[0, 0, 0])
+            o3d.visualization.draw_geometries([world_frame_vis, pcd_human, pcd_shadow])
+        except:
+            print("%s does not have corresponding robot data, maybe because the collision hand pose" % (item[-19::]))
 
 
 def human_shadow_points_check2():
@@ -231,6 +241,7 @@ def human_shadow_points_check2():
         world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[0, 0, 0])
         o3d.visualization.draw_geometries([world_frame_vis, pcd_human, pcd_shadow])
+
 
 if __name__ == "__main__":
     # N, K = 80, 40
