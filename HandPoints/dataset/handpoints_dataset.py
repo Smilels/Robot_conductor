@@ -24,13 +24,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 class HandPointsDataset(data.Dataset):
     def __init__(self, transforms=None, train=True):
         self._cache = os.path.join(BASE_DIR, "sampled")  # get the image directory
-        self.human_points_path = os.path.join(BASE_DIR, "human_points/")
-        self.shadow_points_path = os.path.join(BASE_DIR, "shadow_points/")
+        self.human_points_path = os.path.join(BASE_DIR, "points_human/")
+        self.shadow_points_path = os.path.join(BASE_DIR, "points_shadow/")
         self.train = train
         if not os.path.exists(self._cache):
             os.makedirs(self._cache)
 
-            for split in ["test"]:
+            for split in ["train"]:
                 self.label = np.load(os.path.join(BASE_DIR, split+".npy"))
                 with lmdb.open(
                     os.path.join(self._cache, split), map_size=1 << 36
@@ -40,7 +40,7 @@ class HandPointsDataset(data.Dataset):
                         fname = tag[0].decode("utf-8")
                         target = tag[3:].astype(np.float32)
                         human_points = np.load(os.path.join(
-                            self.human_points_path, fname[:-4] + "_points" + ".npy")).astype(np.float32)
+                            self.human_points_path, fname[:-4] + ".npy")).astype(np.float32)
                         txn.put(
                             str(i).encode(),
                             msgpack_numpy.packb(
@@ -72,6 +72,7 @@ class HandPointsDataset(data.Dataset):
 
     def __len__(self):
         return self._len
+
 
 if __name__== "__main__":
     from torchvision import transforms

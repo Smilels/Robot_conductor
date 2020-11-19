@@ -222,7 +222,7 @@ def human_shadow_points_check2():
         image_height = 480
         near = 0.1 * 1000
         max_depth = 2.0 * 1000
-        fov_y = 1.02974
+        fov_y = 1.18556
         import math
         e = 1.0 / math.tan(fov_y / 2)
         # focal_length can be calculated as f = max(u_res, v_res) / (2*tan(fov/2),
@@ -249,4 +249,4 @@ if __name__ == "__main__":
     # farthest_pts = FPS(pts, K)
     # show_paired_depth_images()
     # pass
-    human_shadow_points_check()
+    human_shadow_points_check2()

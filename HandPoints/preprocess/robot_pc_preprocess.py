@@ -29,7 +29,8 @@ image_width = 640
 image_height = 480
 near = 0.1 * 1000
 max_depth = 2.0 * 1000
-fov_y = 1.02974
+# fov_y = 1.02974
+fov_y = 1.18556
 e = 1.0 / math.tan(fov_y / 2)
 # focal_length can be calculated as f = max(u_res, v_res) / (2*tan(fov/2),
 # where FoV is the perspective angle (from the vision sensor properties)
