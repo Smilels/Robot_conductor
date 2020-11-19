@@ -24,7 +24,7 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
         self.SA_modules = nn.ModuleList()
         self.SA_modules.append(
             PointnetSAModule(
-                npoint=512,
+                npoint=256,
                 radius=0.15,
                 nsample=64,
                 mlp=[3, 64, 64, 128],

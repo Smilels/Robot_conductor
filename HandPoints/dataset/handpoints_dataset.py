@@ -18,7 +18,8 @@ from IPython import embed
 
 SAMPLE_NUM = 1024
 JOINT_NUM = 21
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = '/homeL/sli/code/Robot_conductor/HandPoints/data/points_pca'
 
 
 class HandPointsDataset(data.Dataset):
