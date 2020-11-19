@@ -37,8 +37,8 @@ if sys. argv[1] == "tams108":
 elif sys. argv[1] == "server":
     base_path = "./data/"
     img_path = base_path + "images/"
-    tf_path = os.path.join(base_path, "human_pca_tf/")
-    points_path = base_path + "points_no_pca/points_human/"
+    tf_path = os.path.join(base_path, "points_pca/human_pca_tf/")
+    points_path = base_path + "points_pca/points_human/"
     show_bbx = 0
 
 mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
