@@ -1,5 +1,5 @@
 defaults:
-    - task: cls
+    - task: handjoint
     - model: ssg
     - task_model: ${defaults.0.task}-${defaults.1.model}
 

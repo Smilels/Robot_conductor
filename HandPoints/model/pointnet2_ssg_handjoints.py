@@ -25,7 +25,7 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
         self.SA_modules.append(
             PointnetSAModule(
                 npoint=512,
-                radius=0.2,
+                radius=0.15,
                 nsample=64,
                 mlp=[3, 64, 64, 128],
                 use_xyz=self.hparams["model.use_xyz"],
@@ -34,7 +34,7 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
         self.SA_modules.append(
             PointnetSAModule(
                 npoint=128,
-                radius=0.4,
+                radius=0.15,
                 nsample=64,
                 mlp=[128, 128, 128, 256],
                 use_xyz=self.hparams["model.use_xyz"],
