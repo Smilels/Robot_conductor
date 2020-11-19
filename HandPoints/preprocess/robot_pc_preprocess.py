@@ -48,9 +48,9 @@ if sys. argv[1] == "tams108":
     points_path = os.path.join(base_path, "points_shadow/")
 elif sys. argv[1] == "server":
     base_path = "./data/"
-    img_path = base_path + "images/"
-    tf_path = base_path + "human_pca_tf/"
-    points_path = base_path + "points_no_pca/points_shadow/"
+    img_path = base_path + "depth_shadow/"
+    tf_path = base_path + "points_pca/human_pca_tf/"
+    points_path = base_path + "points_pca/points_shadow/"
     vis_points = 0
 
 if do_pca:
@@ -145,7 +145,7 @@ def get_shadow_points(item):
 
 
 def main():
-    image_lists = glob.glob(img_path + "/*.png")
+    image_lists = glob.glob(img_path + "*.png")
     image_lists.sort()
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
