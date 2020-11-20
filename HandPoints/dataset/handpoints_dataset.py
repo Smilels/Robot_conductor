@@ -31,7 +31,7 @@ class HandPointsDataset(data.Dataset):
         if not os.path.exists(self._cache):
             os.makedirs(self._cache)
 
-            for split in ["train"]:
+            for split in ["train", "test"]:
                 self.label = np.load(os.path.join(BASE_DIR, split+".npy"))
                 with lmdb.open(
                     os.path.join(self._cache, split), map_size=1 << 36

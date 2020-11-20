@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from pointnet2_ops import pointnet2_utils
-
+from IPython import embed
 
 def build_shared_mlp(mlp_spec: List[int], bn: bool = True):
     layers = []

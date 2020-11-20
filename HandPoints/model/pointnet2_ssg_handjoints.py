@@ -27,7 +27,7 @@ class PointNet2HandJointSSG(PointNet2ClassificationSSG):
                 npoint=256,
                 radius=0.15,
                 nsample=64,
-                mlp=[3, 64, 64, 128],
+                mlp=[0, 64, 64, 128],
                 use_xyz=self.hparams["model.use_xyz"],
             )
         )
