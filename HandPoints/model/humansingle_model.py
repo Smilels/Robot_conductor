@@ -15,7 +15,7 @@ from .base_model import BaseModel
 
 class HumansingleModel(BaseModel):
     def __init__(self, opt):
-        super().__init__()
+        BaseModel.__init__(self, opt)
 
         self.loss_names = ['J_L2']
         if self.isTrain:
