@@ -63,7 +63,7 @@ class JointDataset(BaseDataset):
                                 dict(pc=human_points, lbl=target), use_bin_type=True
                             ),
                         )
-        self._lmdb_file = os.path.join(self._cache, "train" if train else "test")
+        self._lmdb_file = os.path.join(self._cache, "train" if self.transforms is not None else "test")
         with lmdb.open(self._lmdb_file, map_size=1 << 36) as lmdb_env:
             self._len = lmdb_env.stat()["entries"]
 
