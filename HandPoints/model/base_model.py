@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function, unicode_literals)
 import os
+import numpy as np
 import torch
 from collections import OrderedDict
 from . import networks
@@ -152,11 +153,14 @@ class BaseModel():
         joint = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
         return joint
 
-    def get_current_error(self):
+    def get_current_acc(self, correct_shadow):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
         joint = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
         acc_error = joint - self.label
-        return acc_error
+        res_shadow = [np.sum(np.sum(abs(acc_error.cpu().data.numpy()) < thresh,
+                                        axis=-1) == 22) for thresh in [0.2, 0.25, 0.3]]
+        correct_shadow = [c + r for c, r in zip(correct_shadow, res_shadow)]
+        return correct_shadow
 
     def get_current_losses(self):
         """Return traning losses / errors. train.py will print out these errors on console, and save them to a file"""

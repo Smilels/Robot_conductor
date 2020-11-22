@@ -5,6 +5,7 @@ import ntpath
 import time
 from . import util, html
 from subprocess import Popen, PIPE
+from collections import OrderedDict
 
 
 if sys.version_info[0] == 2:
@@ -201,13 +202,18 @@ class Visualizer():
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
-    def plot_current_train_acc(self, epoch, acc):
+    def plot_current_train_acc(self, epoch, acc_shadow):
         """display the current losses on visdom display: dictionary of error labels and values
 
         Parameters:
             epoch (int)           -- current epoch
             acc (OrderedDict)  -- training accuracy stored in the format of (name, float) pairs
         """
+        acc = OrderedDict()
+        acc['0.2'] = acc_shadow[0]
+        acc['0.25'] = acc_shadow[1]
+        acc['0.3'] = acc_shadow[2]
+
         if not hasattr(self, 'train_plot_acc'):
             self.train_plot_acc = {'X': [], 'Y': [], 'legend': list(acc.keys())}
         self.train_plot_acc['X'].append(epoch)
@@ -226,13 +232,17 @@ class Visualizer():
             self.create_visdom_connections()
 
 
-    def plot_current_test_acc(self, epoch, acc):
+    def plot_current_test_acc(self, epoch, acc_shadow):
         """display the current losses on visdom display: dictionary of error labels and values
 
         Parameters:
             epoch (int)           -- current epoch
             acc (OrderedDict)  -- training accuracy stored in the format of (name, float) pairs
         """
+        acc = OrderedDict()
+        acc['0.2'] = acc_shadow[0]
+        acc['0.25'] = acc_shadow[1]
+        acc['0.3'] = acc_shadow[2]
         if not hasattr(self, 'test_plot_acc'):
             self.test_plot_acc = {'X': [], 'Y': [], 'legend': list(acc.keys())}
         self.test_plot_acc['X'].append(epoch)
