@@ -55,7 +55,7 @@ if __name__ == '__main__':
             total_iters += args.batch_size
             epoch_iter += args.batch_size
             model.set_input(data)
-            model.argsimize_parameters()  # calculate loss functions, get gradients, update network weights
+            model.optimize_parameters()  # calculate loss functions, get gradients, update network weights
 
             if total_iters % args.print_freq == 0:  # print training losses and save logging information to the disk
                 losses = model.get_current_losses()

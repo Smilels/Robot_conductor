@@ -327,7 +327,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
     return net
 
 
-def break_up_pc(self, pc):
+def break_up_pc(pc):
     xyz = pc[..., 0:3].contiguous()
     features = pc[..., 3:].transpose(1, 2).contiguous() if pc.size(-1) > 3 else None
 

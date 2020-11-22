@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from . import networks
 from .base_model import BaseModel
+from IPython import embed
 
 
 class HumansingleModel(BaseModel):
@@ -39,12 +40,15 @@ class HumansingleModel(BaseModel):
 
     def set_input(self, input):
         pc, label = input
-        self.pc = pc
-        self.lable = label
+        self.pc = pc.to(self.device)
+        self.label = label.to(self.device)
+
+    def forward(self):
+        self.joint_angles =  self.netG(self.pc)
 
     def optimize_parameters(self):
-        joint_angles = self.forward(self.pc)
-        self.joint_angles = joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
+        self.forward()
+        self.joint_angles = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
         self.loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
         self.loss_J_L2.backward()
         self.optimizer_G.step()
