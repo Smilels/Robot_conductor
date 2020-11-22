@@ -12,6 +12,7 @@ import copy
 import torch.utils.data
 import numpy as np
 from tensorboardX import SummaryWriter
+from collections import OrderedDict
 
 from config.train_options import TrainOptions
 from model import create_model
@@ -37,6 +38,8 @@ if __name__ == '__main__':
     total_iters = 0  # the total number of training iterations
 
     thresh_acc = [0.2, 0.25, 0.3]
+    acc_train = OrderedDict()
+    acc_test = OrderedDict()
     for epoch in range(args.epoch_count,
                        args.n_epochs + args.n_epochs_decay + 1):
         # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
@@ -57,6 +60,12 @@ if __name__ == '__main__':
             model.set_input(data)
             model.optimize_parameters()  # calculate loss functions, get gradients, update network weights
 
+            joint_acc_error = model.get_current_error()
+            # compute acc
+            res_shadow = [np.sum(np.sum(abs(joint_acc_error.cpu().data.numpy()) < thresh,
+                                        axis=-1) == 22) for thresh in thresh_acc]
+            correct_shadow = [c + r for c, r in zip(correct_shadow, res_shadow)]
+
             if total_iters % args.print_freq == 0:  # print training losses and save logging information to the disk
                 losses = model.get_current_losses()
                 t_comp = (time.time() - iter_start_time) / args.batch_size
@@ -75,11 +84,18 @@ if __name__ == '__main__':
             model.save_networks('latest')
             model.save_networks(epoch)
 
+        acc_shadow = [float(c) / float(len(dataset.dataset)) for c in correct_shadow]
+        acc_train['0.2'] = acc_shadow[0]
+        acc_train['0.25'] = acc_shadow[1]
+        acc_train['0.3'] = acc_shadow[2]
+        visualizer.plot_current_acc(epoch, acc_train, True)
+
         print('End of epoch %d / %d \t Time Taken: %d sec' % (
         epoch, args.n_epochs + args.n_epochs_decay, time.time() - epoch_start_time))
         model.update_learning_rate()  # update learning rates at the end of every epoch.
 
         # eval
+        test_epoch_start_time = time.time()  # timer for entire epoch
         model.eval()
         for i, data in enumerate(dataset_test):
             model.set_input(data)  # unpack data from data loader
@@ -91,6 +107,14 @@ if __name__ == '__main__':
             correct_shadow = [c + r for c, r in zip(correct_shadow, res_shadow)]
 
         acc_shadow = [float(c) / float(len(dataset_test.dataset)) for c in correct_shadow]
+        acc_test['0.2'] = acc_shadow[0]
+        acc_test['0.25'] = acc_shadow[1]
+        acc_test['0.3'] = acc_shadow[2]
+        visualizer.plot_current_acc(epoch, acc_train, False)
+
         logger.add_scalar('test_acc_shadow0.2', acc_shadow[0], epoch)
         logger.add_scalar('test_acc_shadow0.25', acc_shadow[1], epoch)
         logger.add_scalar('test_acc_shadow0.3', acc_shadow[2], epoch)
+
+        print('Test end of epoch %d / %d \t 0.2 rad accuracy: %d ' % (
+        epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0]))

@@ -5,10 +5,12 @@ videos/
 ros/devel
 ros/build
 weights/
-# Created by https://www.gitignore.io/api/vim
+
+# network outputs
 outputs/
 log/
 checkpoints/
+
 ### Vim ###
 # swap
 [._]*.s[a-v][a-z]
@@ -133,10 +135,4 @@ venv.bak/
 # .idea
 .idea/
 
-# End of https://www.gitignore.io/api/python
-ros/src/shadow_teleop/launch/human_Depth.launch
-ros/src/shadow_teleop/src/human_depth.cpp
-ros/src/shadow_teleop/scripts/human_image_crop.py
-
-ros/src/shadow_teleop/src/gazebo_multi_bioik_dataset.cpp
 *.bag

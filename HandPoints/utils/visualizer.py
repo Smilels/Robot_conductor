@@ -201,7 +201,37 @@ class Visualizer():
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
+    def plot_current_acc(self, epoch, acc, train):
+        """display the current losses on visdom display: dictionary of error labels and values
+
+        Parameters:
+            epoch (int)           -- current epoch
+            acc (OrderedDict)  -- training accuracy stored in the format of (name, float) pairs
+        """
+        if not hasattr(self, 'plot_data'):
+            if train:
+                self.plot_data = {'X': [], 'Y': [], 'legend': list(acc.keys()+'_train')}
+            else:
+                self.plot_data = {'X': [], 'Y': [], 'legend': list(acc.keys()+'_test')}
+        self.plot_data['X'].append(epoch)
+        self.plot_data['Y'].append([acc[k] for k in self.plot_data['legend']])
+        try:
+            self.vis.line(
+                X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
+                Y=np.array(self.plot_data['Y']),
+                opts={
+                    'title': self.name + ' loss over time',
+                    'legend': self.plot_data['legend'],
+                    'xlabel': 'epoch',
+                    'ylabel': 'loss'},
+                win=self.display_id)
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
+
+
     # losses: same format as |losses| of plot_current_losses
+
+
     def print_current_losses(self, epoch, iters, losses, t_comp, t_data):
         """print current losses on console; also save the losses to the disk
 
