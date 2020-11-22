@@ -1,5 +1,6 @@
 assets/
 data/
+HandPoints/data/
 videos/
 ros/devel
 ros/build
