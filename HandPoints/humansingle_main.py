@@ -22,8 +22,6 @@ from dataloader import create_dataset
 if __name__ == '__main__':
     args = TrainOptions().parse()  # get training argsions
 
-    logger = SummaryWriter(os.path.join(args.log_path, args.name))
-
     dataset = create_dataset(args)  # create a dataset given args.dataset_mode and other argsions
     print('The number of training images = %d' % len(dataset))
     args_test = copy.deepcopy(args)
@@ -88,10 +86,10 @@ if __name__ == '__main__':
         acc_train['0.2'] = acc_shadow[0]
         acc_train['0.25'] = acc_shadow[1]
         acc_train['0.3'] = acc_shadow[2]
-        visualizer.plot_current_acc(epoch, acc_train, True)
+        visualizer.plot_current_train_acc(epoch, acc_train)
 
-        print('End of epoch %d / %d \t Time Taken: %d sec' % (
-        epoch, args.n_epochs + args.n_epochs_decay, time.time() - epoch_start_time))
+        print('End of epoch %d / %d \t 0.2 rad accuracy: %.3f\t Time Taken: %d sec' % (
+        epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0], time.time() - epoch_start_time))
         model.update_learning_rate()  # update learning rates at the end of every epoch.
 
         # eval
@@ -110,11 +108,7 @@ if __name__ == '__main__':
         acc_test['0.2'] = acc_shadow[0]
         acc_test['0.25'] = acc_shadow[1]
         acc_test['0.3'] = acc_shadow[2]
-        visualizer.plot_current_acc(epoch, acc_train, False)
+        visualizer.plot_current_test_acc(epoch, acc_test)
 
-        logger.add_scalar('test_acc_shadow0.2', acc_shadow[0], epoch)
-        logger.add_scalar('test_acc_shadow0.25', acc_shadow[1], epoch)
-        logger.add_scalar('test_acc_shadow0.3', acc_shadow[2], epoch)
-
-        print('Test end of epoch %d / %d \t 0.2 rad accuracy: %d ' % (
+        print('Test end of epoch %d / %d \t 0.2 rad accuracy: %.3f ' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0]))

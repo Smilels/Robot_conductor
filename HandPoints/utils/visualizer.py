@@ -193,7 +193,7 @@ class Visualizer():
                 X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
                 Y=np.array(self.plot_data['Y']),
                 opts={
-                    'title': self.name + ' loss over time',
+                    'title': 'Loss over time',
                     'legend': self.plot_data['legend'],
                     'xlabel': 'epoch',
                     'ylabel': 'loss'},
@@ -201,33 +201,54 @@ class Visualizer():
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
-    def plot_current_acc(self, epoch, acc, train):
+    def plot_current_train_acc(self, epoch, acc):
         """display the current losses on visdom display: dictionary of error labels and values
 
         Parameters:
             epoch (int)           -- current epoch
             acc (OrderedDict)  -- training accuracy stored in the format of (name, float) pairs
         """
-        if not hasattr(self, 'plot_data'):
-            if train:
-                self.plot_data = {'X': [], 'Y': [], 'legend': list(acc.keys()+'_train')}
-            else:
-                self.plot_data = {'X': [], 'Y': [], 'legend': list(acc.keys()+'_test')}
-        self.plot_data['X'].append(epoch)
-        self.plot_data['Y'].append([acc[k] for k in self.plot_data['legend']])
+        if not hasattr(self, 'train_plot_acc'):
+            self.train_plot_acc = {'X': [], 'Y': [], 'legend': list(acc.keys())}
+        self.train_plot_acc['X'].append(epoch)
+        self.train_plot_acc['Y'].append([acc[k] for k in self.train_plot_acc['legend']])
         try:
             self.vis.line(
-                X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
-                Y=np.array(self.plot_data['Y']),
-                opts={
-                    'title': self.name + ' loss over time',
-                    'legend': self.plot_data['legend'],
-                    'xlabel': 'epoch',
-                    'ylabel': 'loss'},
-                win=self.display_id)
+            X=np.stack([np.array(self.train_plot_acc['X'])] * len(self.train_plot_acc['legend']), 1),
+            Y=np.array(self.train_plot_acc['Y']),
+            opts={
+                'title': 'Train acc over time',
+                'legend': self.train_plot_acc['legend'],
+                'xlabel': 'epoch',
+                'ylabel': 'accuracy'},
+                win=self.display_id+10)
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
+
+    def plot_current_test_acc(self, epoch, acc):
+        """display the current losses on visdom display: dictionary of error labels and values
+
+        Parameters:
+            epoch (int)           -- current epoch
+            acc (OrderedDict)  -- training accuracy stored in the format of (name, float) pairs
+        """
+        if not hasattr(self, 'test_plot_acc'):
+            self.test_plot_acc = {'X': [], 'Y': [], 'legend': list(acc.keys())}
+        self.test_plot_acc['X'].append(epoch)
+        self.test_plot_acc['Y'].append([acc[k] for k in self.test_plot_acc['legend']])
+        try:
+            self.vis.line(
+            X=np.stack([np.array(self.test_plot_acc['X'])] * len(self.test_plot_acc['legend']), 1),
+            Y=np.array(self.test_plot_acc['Y']),
+            opts={
+                'title': 'Test acc over time',
+                'legend': self.test_plot_acc['legend'],
+                'xlabel': 'epoch',
+                'ylabel': 'accuracy'},
+                win=self.display_id+11)
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
 
     # losses: same format as |losses| of plot_current_losses
 
