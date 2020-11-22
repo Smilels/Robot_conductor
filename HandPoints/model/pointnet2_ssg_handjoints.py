@@ -13,8 +13,8 @@ from pointnet2_ops.pointnet2_modules import PointnetFPModule, PointnetSAModule
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-import HandPoints.dataset.data_utils as d_utils
-from HandPoints.dataset import HandPointsDataset
+import HandPoints.data.data_utils as d_utils
+from HandPoints.data import HandPointsDataset
 from HandPoints.model.pointnet2_ssg_cls import PointNet2ClassificationSSG
 from IPython import embed
 

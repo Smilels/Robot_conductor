@@ -1,1 +1,1 @@
-from HandPoints import dataset, model
+from HandPoints import data, model

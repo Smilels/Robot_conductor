@@ -1,1 +1,0 @@
-from .handpoints_dataset import HandPointsDataset

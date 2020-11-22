@@ -6,6 +6,8 @@ ros/build
 weights/
 # Created by https://www.gitignore.io/api/vim
 outputs/
+log/
+checkpoints/
 ### Vim ###
 # swap
 [._]*.s[a-v][a-z]
