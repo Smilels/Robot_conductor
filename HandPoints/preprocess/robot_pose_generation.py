@@ -224,7 +224,7 @@ def cartesian_pos_show(base_path):
 
 if __name__ == '__main__':
     batch_size = 1
-    base_path = "../data/"
+    base_path = "../dataloader/"
     # cartesian_pos_show(base_path)
     map_loader = Map_Loader(base_path)
     filename = base_path + "shadow_hand_mapping_pose_file.csv"

@@ -16,7 +16,7 @@ from tensorboardX import SummaryWriter
 from config.train_options import TrainOptions
 from model import create_model
 from utils.visualizer import Visualizer
-from data import create_dataset
+from dataloader import create_dataset
 
 if __name__ == '__main__':
     args = TrainOptions().parse()  # get training argsions

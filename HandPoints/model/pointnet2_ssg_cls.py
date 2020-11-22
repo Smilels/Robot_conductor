@@ -8,7 +8,7 @@ from pointnet2_ops.pointnet2_modules import PointnetFPModule, PointnetSAModule
 from torch.utils.data import DataLoader, DistributedSampler
 from torchvision import transforms
 
-import HandPoints.data.data_utils as d_utils
+import HandPoints.dataloader.data_utils as d_utils
 
 def set_bn_momentum_default(bn_momentum):
     def fn(m):

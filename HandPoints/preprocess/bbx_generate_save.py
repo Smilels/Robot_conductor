@@ -28,7 +28,7 @@ centerY = 245.287079
 
 def main():
     """crop human hand images to 100*100"""
-    base_path = "../data/"
+    base_path = "../dataloader/"
     DataFile = open(base_path + "full_annotation/Subject_1/301375_loc_shift_made_by_qi_20180112_v2.txt", "r")
     lines = DataFile.read().splitlines()
     # camera center coordinates and focal length
