@@ -225,16 +225,16 @@ class Visualizer():
             losses (OrderedDict)  -- training losses stored in the format of (name, float) pairs
         """
         if not hasattr(self, 'plot_data'):
-            self.plot_data = {'X': [], 'Y': [], 'legend': list(losses.keys())}
-        self.plot_data['X'].append(epoch)
-        self.plot_data['Y'].append([losses[k]/data_length for k in self.plot_data['legend']])
+            self.plot_test_loss = {'X': [], 'Y': [], 'legend': list(losses.keys())}
+        self.plot_test_loss['X'].append(epoch)
+        self.plot_test_loss['Y'].append([losses[k]/data_length for k in self.plot_test_loss['legend']])
         try:
             self.vis.line(
-                X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
-                Y=np.array(self.plot_data['Y']),
+                X=np.stack([np.array(self.plot_test_loss['X'])] * len(self.plot_test_loss['legend']), 1),
+                Y=np.array(self.plot_test_loss['Y']),
                 opts={
                     'title': 'Test Loss over time',
-                    'legend': self.plot_data['legend'],
+                    'legend': self.plot_test_loss['legend'],
                     'xlabel': 'epoch',
                     'ylabel': 'loss'},
                 win=self.display_id+1)
