@@ -177,6 +177,19 @@ class Visualizer():
                 webpage.add_images(ims, txts, links, width=self.win_size)
             webpage.save()
 
+    def plot_pc(self):
+        try:
+            self.vis.scatter(
+                X=self.pc.contiguous().data.cpu()[:, :3],
+                win=self.display_id+2,
+                opts=dict(
+                    title='pc',
+                    markersize=2,
+                ),
+            )
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
+
     def plot_current_losses(self, epoch, counter_ratio, losses):
         """display the current losses on visdom display: dictionary of error labels and values
 
@@ -199,6 +212,31 @@ class Visualizer():
                     'xlabel': 'epoch',
                     'ylabel': 'loss'},
                 win=self.display_id)
+        except VisdomExceptionBase:
+            self.create_visdom_connections()
+
+    def plot_test_losses(self, epoch, losses):
+        """display the current losses on visdom display: dictionary of error labels and values
+
+        Parameters:
+            epoch (int)           -- current epoch
+            counter_ratio (float) -- progress (percentage) in the current epoch, between 0 to 1
+            losses (OrderedDict)  -- training losses stored in the format of (name, float) pairs
+        """
+        if not hasattr(self, 'plot_data'):
+            self.plot_data = {'X': [], 'Y': [], 'legend': list(losses.keys())}
+        self.plot_data['X'].append(epoch)
+        self.plot_data['Y'].append([losses[k] for k in self.plot_data['legend']])
+        try:
+            self.vis.line(
+                X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),
+                Y=np.array(self.plot_data['Y']),
+                opts={
+                    'title': 'Test Loss over time',
+                    'legend': self.plot_data['legend'],
+                    'xlabel': 'epoch',
+                    'ylabel': 'loss'},
+                win=self.display_id+1)
         except VisdomExceptionBase:
             self.create_visdom_connections()
 

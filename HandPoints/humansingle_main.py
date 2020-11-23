@@ -13,6 +13,7 @@ from model import create_model
 from utils.visualizer import Visualizer
 from dataloader import create_dataset
 
+
 if __name__ == '__main__':
     args = TrainOptions().parse()  # get training argsions
 
@@ -58,6 +59,7 @@ if __name__ == '__main__':
                 visualizer.print_current_losses(epoch, epoch_iter, losses, t_comp, t_data)
                 if args.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / len(dataset), losses)
+                    visualizer.plot_pc()
 
             if total_iters % args.save_latest_freq == 0:  # cache our latest model every <save_latest_freq> iterations
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))
@@ -70,21 +72,30 @@ if __name__ == '__main__':
             model.save_networks('latest')
             model.save_networks(epoch)
 
-        acc_shadow = [float(c) / float(len(dataset.dataset)) for c in train_correct_shadow]
-        visualizer.plot_current_train_acc(epoch, acc_shadow)
         print('End of training epoch %d / %d, Accuracy of <0.2 error: %.3f, Time Taken: %d sec' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0], time.time() - epoch_start_time))
+        acc_shadow = [float(c) / float(len(dataset.dataset)) for c in train_correct_shadow]
+        if args.display_id > 0:
+            visualizer.plot_current_train_acc(epoch, acc_shadow)
+
         model.update_learning_rate()  # update learning rates at the end of every epoch.
 
         # eval
         test_epoch_start_time = time.time()  # timer for entire epoch
         model.eval()
+        test_losses = 0
         for i, data in enumerate(dataset_test):
             model.set_input(data)  # unpack data from data loader
             model.test()  # run inference
             test_correct_shadow = model.get_current_acc(test_correct_shadow)
 
+            test_loss = model.get_current_losses()
+            for name, value in test_loss.items():
+                test_losses[name] += value
+
         acc_shadow = [float(c) / float(len(dataset_test.dataset)) for c in test_correct_shadow]
-        visualizer.plot_current_test_acc(epoch, acc_shadow)
         print('End of testing epoch %d / %d, Accuracy of <0.2 error: %.3f' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0]))
+        if args.display_id > 0:
+            visualizer.plot_test_losses(epoch, test_losses/len(dataset_test.dataloader))
+            visualizer.plot_current_test_acc(epoch, acc_shadow)
