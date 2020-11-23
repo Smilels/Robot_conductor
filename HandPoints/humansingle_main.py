@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
         acc_shadow = [float(c) / float(len(dataset.dataset)) for c in train_correct_shadow]
         visualizer.plot_current_train_acc(epoch, acc_shadow)
-        print('End of training epoch %d / %d \t Accuracy of <0.2 error: %.3f \t Time Taken: %d sec' % (
+        print('End of training epoch %d / %d, Accuracy of <0.2 error: %.3f, Time Taken: %d sec' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0], time.time() - epoch_start_time))
         model.update_learning_rate()  # update learning rates at the end of every epoch.
 
@@ -86,5 +86,5 @@ if __name__ == '__main__':
 
         acc_shadow = [float(c) / float(len(dataset_test.dataset)) for c in test_correct_shadow]
         visualizer.plot_current_test_acc(epoch, acc_shadow)
-        print('End of testing epoch %d / %d \t Accuracy of <0.2 error: %.3f' % (
+        print('End of testing epoch %d / %d, Accuracy of <0.2 error: %.3f' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0]))
