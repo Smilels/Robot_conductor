@@ -44,11 +44,11 @@ class HumansingleModel(BaseModel):
         self.label = label.to(self.device)
 
     def forward(self):
-        self.joint_angles =  self.netG(self.pc)
+        joint_angles = self.netG(self.pc)
+        self.joint_angles = joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
 
     def optimize_parameters(self):
         self.forward()
-        joint_angles = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
-        self.loss_J_L2 = F.mse_loss(joint_angles, self.label)
+        self.loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
         self.loss_J_L2.backward()
         self.optimizer_G.step()

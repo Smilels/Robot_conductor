@@ -2,6 +2,7 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 import os
 import numpy as np
 import torch
+import torch.nn.functional as F
 from collections import OrderedDict
 from . import networks
 # python 3
@@ -121,6 +122,7 @@ class BaseModel(ABC):
         """
         with torch.no_grad():
             self.forward()
+
             # self.compute_visuals()
 
     def compute_visuals(self):
@@ -152,13 +154,11 @@ class BaseModel(ABC):
 
     def get_current_joints(self):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
-        joint = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
-        return joint
+        return self.joint_angles
 
     def get_current_acc(self, correct_shadow):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
-        joint = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
-        acc_error = joint - self.label
+        acc_error = self.joint_angles - self.label
         res_shadow = [np.sum(np.sum(abs(acc_error.cpu().data.numpy()) < thresh,
                                         axis=-1) == 22) for thresh in [0.2, 0.25, 0.3]]
         correct_shadow = [c + r for c, r in zip(correct_shadow, res_shadow)]
@@ -173,15 +173,14 @@ class BaseModel(ABC):
                     getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
         return errors_ret
 
-
     def get_test_losses(self, test_losses):
         """Return test losses / errors. train.py will print out these errors on console, and save them to a file"""
+        test_loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
         for name in self.loss_names:
             if isinstance(name, str):
                 if not any(name in item for item in test_losses.items()):
                     test_losses[name] = 0
-                test_losses[name] += float(
-                       getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+                test_losses[name] += float(test_loss_J_L2)
         return test_losses
 
     def save_networks(self, epoch):
