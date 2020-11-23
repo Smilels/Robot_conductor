@@ -173,6 +173,17 @@ class BaseModel(ABC):
                     getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
         return errors_ret
 
+
+    def get_test_losses(self, test_losses):
+        """Return test losses / errors. train.py will print out these errors on console, and save them to a file"""
+        for name in self.loss_names:
+            if isinstance(name, str):
+                if not any(name in item for item in test_losses.items()):
+                    test_losses[name] = 0
+                test_losses[name] += float(
+                       getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+        return test_losses
+
     def save_networks(self, epoch):
         """Save all the networks to the disk.
 

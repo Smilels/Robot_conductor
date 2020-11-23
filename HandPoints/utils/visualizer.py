@@ -177,14 +177,15 @@ class Visualizer():
                 webpage.add_images(ims, txts, links, width=self.win_size)
             webpage.save()
 
-    def plot_pc(self):
+    def plot_pc(self, input, frame):
         try:
             self.vis.scatter(
-                X=self.pc.contiguous().data.cpu()[:, :3],
+                X=input.contiguous().data.cpu()[:, :3],
                 win=self.display_id+2,
                 opts=dict(
-                    title='pc',
+                    title=frame,
                     markersize=2,
+                    markercolor=np.array([255,62,150]).reshape(1,3)
                 ),
             )
         except VisdomExceptionBase:
@@ -215,7 +216,7 @@ class Visualizer():
         except VisdomExceptionBase:
             self.create_visdom_connections()
 
-    def plot_test_losses(self, epoch, losses):
+    def plot_test_losses(self, epoch, losses, data_length):
         """display the current losses on visdom display: dictionary of error labels and values
 
         Parameters:
@@ -226,7 +227,7 @@ class Visualizer():
         if not hasattr(self, 'plot_data'):
             self.plot_data = {'X': [], 'Y': [], 'legend': list(losses.keys())}
         self.plot_data['X'].append(epoch)
-        self.plot_data['Y'].append([losses[k] for k in self.plot_data['legend']])
+        self.plot_data['Y'].append([losses[k]/data_length for k in self.plot_data['legend']])
         try:
             self.vis.line(
                 X=np.stack([np.array(self.plot_data['X'])] * len(self.plot_data['legend']), 1),

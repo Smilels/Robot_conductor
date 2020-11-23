@@ -39,7 +39,7 @@ class HumansingleModel(BaseModel):
                                                -0.349, 0, 0, 0, -1.047, 0, -0.209, -0.524, 0]).to(self.device)
 
     def set_input(self, input):
-        pc, label = input
+        _, pc, label = input
         self.pc = pc.to(self.device)
         self.label = label.to(self.device)
 

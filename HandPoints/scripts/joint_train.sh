@@ -23,7 +23,8 @@ GPU_ID=0
 python ./humansingle_main.py \
   --gpu_ids ${GPU_ID} \
   --dataroot ${DATAROOT} \
-  --name ${NAME_BASE}_${NAME} \
+  --name ${DISPLAY_ENV} \
+  --display_env ${DISPLAY_ENV} \
   --batch_size ${BS} \
   --model ${MODEL} \
   --netG ${NETG} \

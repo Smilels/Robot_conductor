@@ -58,7 +58,7 @@ class JointDataset(BaseDataset):
                         txn.put(
                             str(i).encode(),
                             msgpack_numpy.packb(
-                                dict(pc=human_points, lbl=target), use_bin_type=True
+                                dict(frame=fname, pc=human_points, lbl=target), use_bin_type=True
                             ),
                         )
         self._lmdb_file = os.path.join(self._cache, "train" if self.transforms is not None else "test")
@@ -85,7 +85,7 @@ class JointDataset(BaseDataset):
         if self.transforms is not None:
             human_points = self.transforms(human_points)
 
-        return human_points, np.array(ele["lbl"])
+        return ele['frame'], human_points, np.array(ele["lbl"])
 
     def __len__(self):
         return self._len
