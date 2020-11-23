@@ -184,18 +184,17 @@ class PointNet2HandJointSSG(nn.Module):
         )
         self.SA_modules.append(
             PointnetSAModule(
-                mlp=[256, 256, 512, 1024], use_xyz=True
+                mlp=[256, 256, 512], use_xyz=True
             )
         )
         self.fc_layer = nn.Sequential(
-            nn.Linear(1024, 512, bias=False),
-            nn.BatchNorm1d(512),
-            nn.ReLU(True),
             nn.Linear(512, 256, bias=False),
             nn.BatchNorm1d(256),
             nn.ReLU(True),
-            nn.Dropout(0.5),
-            nn.Linear(256, 22),
+            nn.Linear(256, 128, bias=False),
+            nn.BatchNorm1d(128),
+            nn.ReLU(True),
+            nn.Linear(128, 22),
         )
 
     def forward(self, pointcloud):
