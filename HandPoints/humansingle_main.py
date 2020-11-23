@@ -32,7 +32,8 @@ if __name__ == '__main__':
     for epoch in range(args.epoch_count,
                        args.n_epochs + args.n_epochs_decay + 1):
         # outer loop for different epochs; we save the model by <epoch_count>, <epoch_count>+<save_latest_freq>
-        correct_shadow = [0, 0, 0]
+        train_correct_shadow = [0, 0, 0]
+        test_correct_shadow = [0, 0, 0]
         epoch_start_time = time.time()  # timer for entire epoch
         iter_data_time = time.time()  # timer for data loading per iteration
         epoch_iter = 0  # the number of training iterations in current epoch, reset to 0 every epoch
@@ -49,7 +50,7 @@ if __name__ == '__main__':
             model.set_input(data)
             model.optimize_parameters()  # calculate loss functions, get gradients, update network weights
 
-            correct_shadow = model.get_current_acc(correct_shadow)
+            train_correct_shadow = model.get_current_acc(train_correct_shadow)
 
             if total_iters % args.print_freq == 0:  # print training losses and save logging information to the disk
                 losses = model.get_current_losses()
@@ -69,9 +70,9 @@ if __name__ == '__main__':
             model.save_networks('latest')
             model.save_networks(epoch)
 
-        acc_shadow = [float(c) / float(len(dataset.dataset)) for c in correct_shadow]
+        acc_shadow = [float(c) / float(len(dataset.dataset)) for c in train_correct_shadow]
         visualizer.plot_current_train_acc(epoch, acc_shadow)
-        print('End of epoch %d / %d \t 0.2 rad accuracy: %.3f\t Time Taken: %d sec' % (
+        print('End of training epoch %d / %d \t Accuracy of <0.2 error: %.3f \t Time Taken: %d sec' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0], time.time() - epoch_start_time))
         model.update_learning_rate()  # update learning rates at the end of every epoch.
 
@@ -81,9 +82,9 @@ if __name__ == '__main__':
         for i, data in enumerate(dataset_test):
             model.set_input(data)  # unpack data from data loader
             model.test()  # run inference
-            correct_shadow = model.get_current_acc(correct_shadow)
+            test_correct_shadow = model.get_current_acc(test_correct_shadow)
 
-        acc_shadow = [float(c) / float(len(dataset_test.dataset)) for c in correct_shadow]
+        acc_shadow = [float(c) / float(len(dataset_test.dataset)) for c in test_correct_shadow]
         visualizer.plot_current_test_acc(epoch, acc_shadow)
-        print('Test end of epoch %d / %d \t 0.2 rad accuracy: %.3f ' % (
+        print('End of testing epoch %d / %d \t Accuracy of <0.2 error: %.3f' % (
         epoch, args.n_epochs + args.n_epochs_decay, acc_shadow[0]))

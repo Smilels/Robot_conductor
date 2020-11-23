@@ -48,7 +48,7 @@ class HumansingleModel(BaseModel):
 
     def optimize_parameters(self):
         self.forward()
-        self.joint_angles = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
-        self.loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
+        joint_angles = self.joint_angles * (self.joint_upper_range - self.joint_lower_range) + self.joint_lower_range
+        self.loss_J_L2 = F.mse_loss(joint_angles, self.label)
         self.loss_J_L2.backward()
         self.optimizer_G.step()
