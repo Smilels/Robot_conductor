@@ -224,7 +224,7 @@ class Visualizer():
             counter_ratio (float) -- progress (percentage) in the current epoch, between 0 to 1
             losses (OrderedDict)  -- training losses stored in the format of (name, float) pairs
         """
-        if not hasattr(self, 'plot_data'):
+        if not hasattr(self, 'plot_test_loss'):
             self.plot_test_loss = {'X': [], 'Y': [], 'legend': list(losses.keys())}
         self.plot_test_loss['X'].append(epoch)
         self.plot_test_loss['Y'].append([losses[k]/data_length for k in self.plot_test_loss['legend']])
