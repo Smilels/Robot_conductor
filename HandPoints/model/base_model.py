@@ -154,7 +154,7 @@ class BaseModel(ABC):
 
     def get_current_joints(self):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
-        return joint_angles
+        return self.joint_angles
 
     def get_current_acc(self, correct_shadow):
         """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""

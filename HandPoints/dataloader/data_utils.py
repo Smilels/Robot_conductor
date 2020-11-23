@@ -171,7 +171,7 @@ def label_generation():
     np.save('data/robot_joints_file_consist_400K.npy', shadow_consist)
 
     # spilt joint labels to train and test dataset
-    label = shadow_consist[:20000]
+    label = shadow_consist[:50000]
     # label = shadow_consist
     train_sample = int(len(label) * 0.8)
     train = label[:train_sample]

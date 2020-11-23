@@ -5,7 +5,7 @@ MODEL='humansingle'
 NETG='pc'
 NORM='batch'
 BS=32
-LR=0.001
+LR=0.0001
 
 # dataset
 DATAROOT='./data/points_pca'
@@ -17,7 +17,7 @@ N_EPOCH=200
 NAME_BASE=${DATE}_${MODEL}_${NETG}${NGF}_bs${BS}lr${LR}ep${N_EPOCH}
 NAME=''
 DISPLAY_ENV=${NAME_BASE}_${NAME}
-GPU_ID=0
+GPU_ID=0,1
 
 # command
 python ./humansingle_main.py \
