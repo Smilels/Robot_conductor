@@ -25,6 +25,7 @@ JOINT_NUM = 21
 
 class JointDataset(BaseDataset):
     def __init__(self, opt):
+        BaseDataset.__init__(self, opt)
         self._cache = os.path.join(opt.dataroot, "sampled")  # get the image directory
         self.human_points_path = os.path.join(opt.dataroot, "points_human/")
         self.shadow_points_path = os.path.join(opt.dataroot, "points_shadow/")
@@ -33,11 +34,8 @@ class JointDataset(BaseDataset):
                 [
                     d_utils.PointcloudToTensor(),
                     d_utils.PointcloudScale(),
-                    d_utils.PointcloudRotate(),
-                    d_utils.PointcloudRotatePerturbation(),
-                    d_utils.PointcloudTranslate(),
-                    d_utils.PointcloudJitter(),
-                    d_utils.PointcloudRandomInputDropout(),
+                    d_utils.PointcloudRotate(axis=np.array([0.0, 0.0, 1.0])),
+                    d_utils.PointcloudTranslate(translate_range=0.015)
                 ]
             )
         elif opt.phase == "test":
@@ -80,7 +78,6 @@ class JointDataset(BaseDataset):
             ele = msgpack_numpy.unpackb(txn.get(str(index).encode()), raw=False)
 
         points = np.array(ele["pc"])
-
         pt_idxs = np.arange(0, self.num_points)
         np.random.shuffle(pt_idxs)
         human_points = points[pt_idxs, :]

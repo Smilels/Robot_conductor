@@ -23,7 +23,7 @@ N_EPOCH=200
 NAME_BASE=${DATE}_${MODEL}_${NETG}${NGF}_bs${BS}lr${LR}ep${N_EPOCH}
 NAME=''
 DISPLAY_ENV=${NAME_BASE}_${NAME}
-GPU_ID=1
+GPU_ID=0
 
 # command
 python ./humansingle_main.py \

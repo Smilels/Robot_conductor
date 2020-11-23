@@ -36,7 +36,7 @@ def angle_axis(angle, axis):
 
 
 class PointcloudScale(object):
-    def __init__(self, lo=0.8, hi=1.25):
+    def __init__(self, lo=0.85, hi=1.15):
         self.lo, self.hi = lo, hi
 
     def __call__(self, points):
@@ -111,7 +111,7 @@ class PointcloudJitter(object):
 
 
 class PointcloudTranslate(object):
-    def __init__(self, translate_range=0.1):
+    def __init__(self, translate_range=0.015):
         self.translate_range = translate_range
 
     def __call__(self, points):

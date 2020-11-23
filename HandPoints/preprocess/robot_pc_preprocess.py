@@ -51,7 +51,7 @@ elif sys. argv[1] == "server":
     img_path = base_path + "depth_shadow/"
     tf_path = base_path + "points_pca/human_pca_tf/"
     points_path = base_path + "points_pca/points_shadow/"
-    vis_points = 0
+    vis_points = 1
 
 if do_pca:
     tf_lists = os.listdir(tf_path)
@@ -149,9 +149,9 @@ def main():
     image_lists.sort()
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
-    pool.map(get_shadow_points, image_lists)
-    # for item in image_lists:
-    #     get_shadow_points(item)
+#    pool.map(get_shadow_points, image_lists)
+    for item in image_lists:
+        get_shadow_points(item)
 
 
 if __name__ == '__main__':

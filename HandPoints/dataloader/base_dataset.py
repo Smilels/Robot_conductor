@@ -4,11 +4,10 @@ It also includes common transformation functions (e.g., get_transform, __scale_w
 """
 from __future__ import (absolute_import, division,print_function,unicode_literals)
 import torch.utils.data as data
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class BaseDataset(data.Dataset):
-    __metaclass__ = ABCMeta
+class BaseDataset(data.Dataset, ABC):
     """This class is an abstract base class (ABC) for datasets.
 
     To create a subclass, you need to implement the following four functions:

@@ -73,7 +73,7 @@ class CustomDatasetDataLoader():
             batch_size=opt.batch_size,
             drop_last=True,
             shuffle=True if opt.phase=='train' else False,
-            num_workers=int(opt.num_threads))
+            num_workers=int(opt.batch_size))
 
     def load_data(self):
         return self

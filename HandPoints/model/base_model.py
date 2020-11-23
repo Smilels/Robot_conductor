@@ -5,15 +5,17 @@ import torch
 from collections import OrderedDict
 from . import networks
 # python 3
-# from abc import ABC, abstractmethod
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
+# python 2
+# from abc import ABCMeta, abstractmethod
 
+from IPython import embed
 
 # python 3
-# class BaseModel(ABC):
+class BaseModel(ABC):
 # python 2
-class BaseModel():
-    __metaclass__ = ABCMeta
+#class BaseModel():
+#    __metaclass__ = ABCMeta
     """This class is an abstract base class (ABC) for models.
     To create a subclass, you need to implement the following five functions:
         -- <__init__>:                      initialize the class; first call BaseModel.__init__(self, opt).
