@@ -13,12 +13,12 @@ import cv2
 import open3d as o3d
 from IPython import embed
 import multiprocessing as mp
-from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx, normalization_mean
 
 
 save_norm = False
 show_bbx = 0
-do_pca = 1
+do_pca = 0
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -26,8 +26,8 @@ centerX = 315.944855
 centerY = 245.287079
 
 DOWN_SAMPLE_NUM = 2048
-FPS_SAMPLE_NUM = 512
-
+FPS_SAMPLE_NUM = 1024
+ 
 
 if sys. argv[1] == "tams108":
     base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
@@ -37,8 +37,8 @@ if sys. argv[1] == "tams108":
 elif sys. argv[1] == "server":
     base_path = "./data/"
     img_path = base_path + "images/"
-    tf_path = os.path.join(base_path, "points_pca/human_pca_tf/")
-    points_path = base_path + "points_pca/points_human/"
+    tf_path = os.path.join(base_path, "points_no_pca/human_pca_tf/")
+    points_path = base_path + "points_no_pca/points_human/"
     show_bbx = 0
 
 mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1]])
@@ -92,7 +92,8 @@ def get_human_points(line):
     normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
 
     # 9 normalize point cloud
-    points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+    # points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+    points_normalized, _ = normalization_mean(points_pca_fps_sampled)
 
     if show_bbx:
         pcd = o3d.geometry.PointCloud()
@@ -153,7 +154,7 @@ def main():
     lines.sort()
     cores = mp.cpu_count()
     pool = mp.Pool(processes=cores)
-    pool.map(get_human_points, lines)
+    pool.map(get_human_points, lines[:30000])
     # for line in lines:
     #     get_human_points(line)
     datafile.close()

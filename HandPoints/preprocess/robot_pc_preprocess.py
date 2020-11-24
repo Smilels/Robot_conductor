@@ -20,10 +20,10 @@ from IPython import embed
 
 save_norm = 0
 vis_points = 0
-do_pca = 1
+do_pca = 0
 
 DOWN_SAMPLE_NUM = 2048
-FPS_SAMPLE_NUM = 512
+FPS_SAMPLE_NUM = 1204
 
 image_width = 640
 image_height = 480
@@ -100,7 +100,8 @@ def get_shadow_points(item):
     normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
 
     # 6 normalize point cloud
-    points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+    #points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+    points_normalized, max_bb3d_len, offset = normalization_mean(points_pca_fps_sampled)
 
     if vis_points:
         pcd = o3d.geometry.PointCloud()

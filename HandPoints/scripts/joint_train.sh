@@ -8,8 +8,8 @@ BS=32
 LR=0.0001
 
 # dataset
-DATAROOT='./data/points_pca'
-NUM_POINTS=512
+DATAROOT='./data/points_no_pca'
+NUM_POINTS=1024
 
 # naming
 DATE=`date '+%Y%m%d%H'`

@@ -64,6 +64,8 @@ if __name__ == '__main__':
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / len(dataset), losses)
                     idx = random.randint(0, args.batch_size-1)
                     visualizer.plot_pc(model.pc[idx], data[0][idx])
+                   # print(data[2][idx])
+                   # embed()
 
             if total_iters % args.save_latest_freq == 0:  # cache our latest model every <save_latest_freq> iterations
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))

@@ -145,7 +145,7 @@ def label_generation():
     # 1. find which human pointclouds are not exited but have shadow joints file
     import os
     shadow_file = np.load("data/robot_joints_file.npy")
-    human_img_list = os.listdir('data/points_pca/points_human/')
+    human_img_list = os.listdir('data/points_no_pca/points_human/')
     human_img_list.sort()
     f_index = {}
     for ind, line in enumerate(human_img_list):
@@ -165,19 +165,20 @@ def label_generation():
     delete_index = []
     for i, tmp in enumerate(shadow_file[:, 0]):
         if tmp[:-4].decode("utf-8") in noimg_array:
+            print(tmp)
             delete_index += [i]
     shadow_consist = np.delete(shadow_file, delete_index, 0)
     np.random.shuffle(shadow_consist)
-    np.save('data/robot_joints_file_consist_400K.npy', shadow_consist)
+    np.save('data/robot_joints_file_consist_20K.npy', shadow_consist)
 
     # spilt joint labels to train and test dataset
-    label = shadow_consist[:50000]
+    label = shadow_consist[:20000]
     # label = shadow_consist
     train_sample = int(len(label) * 0.8)
     train = label[:train_sample]
     test = label[train_sample:]
-    np.save('data/points_pca/train.npy', train)
-    np.save('data/points_pca/test.npy', test)
+    np.save('data/points_no_pca/train.npy', train)
+    np.save('data/points_no_pca/test.npy', test)
 
 
 if __name__ == "__main__":

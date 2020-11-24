@@ -166,7 +166,7 @@ class PointNet2HandJointSSG(nn.Module):
         self.SA_modules = nn.ModuleList()
         self.SA_modules.append(
             PointnetSAModule(
-                npoint=256,
+                npoint=512,
                 radius=0.15,
                 nsample=64,
                 mlp=[0, 64, 64, 128],
