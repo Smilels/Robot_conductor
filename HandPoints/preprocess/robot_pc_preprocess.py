@@ -11,7 +11,7 @@ import os, sys
 import cv2
 import open3d as o3d
 import math
-from utils import depth2pc, robot_pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx
+from utils import depth2pc, robot_pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx, normalization_mean
 import glob
 import numpy as np
 import multiprocessing as mp
