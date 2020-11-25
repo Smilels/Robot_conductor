@@ -1,5 +1,6 @@
 import importlib
 from model.base_model import BaseModel
+from model.model import PointNet2HandJointSSG
 from IPython import embed
 
 
