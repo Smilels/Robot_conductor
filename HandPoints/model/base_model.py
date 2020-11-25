@@ -152,19 +152,19 @@ class BaseModel(ABC):
         return visual_ret
 
     def get_current_joints(self):
-        """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
+        """Return outputs"""
         return self.joint_angles
 
     def get_current_acc(self, correct_shadow):
-        """Return visualization images. train.py will display these images with visdom, and save the images to a HTML"""
-        acc_error = self.joint_angles - self.label
-        res_shadow = [np.sum(np.sum(abs(acc_error.cpu().data.numpy()) < thresh,
+        """Return training/test accuracy"""
+        acc_error = self.joint_angles.cpu().data.numpy() - self.label.cpu().data.numpy()
+        res_shadow = [np.sum(np.sum(abs(acc_error) < thresh,
                                         axis=-1) == 22) for thresh in [0.2, 0.25, 0.3]]
         correct_shadow = [c + r for c, r in zip(correct_shadow, res_shadow)]
         return correct_shadow
 
     def get_current_losses(self):
-        """Return traning losses / errors. train.py will print out these errors on console, and save them to a file"""
+        """Return traning losses. train.py will print out these errors on console, and save them to a file"""
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
@@ -173,7 +173,7 @@ class BaseModel(ABC):
         return errors_ret
 
     def get_test_losses(self, test_losses):
-        """Return test losses / errors. train.py will print out these errors on console, and save them to a file"""
+        """Return test losses. train.py will print out these errors on console, and save them to a file"""
         test_loss_J_L2 = self.criterionL2(self.joint_angles, self.label)
         for name in self.loss_names:
             if isinstance(name, str):
