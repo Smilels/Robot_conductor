@@ -40,6 +40,7 @@ class HumansingleModel(BaseModel):
 
     def set_input(self, input):
         frame, pc, label = input
+        # pc = pc.transpose(2, 1)
         self.pc = pc.to(self.device)
         self.label = label.to(self.device)
 
