@@ -144,15 +144,20 @@ class PointcloudRandomInputDropout(object):
 def label_generation():
     # 1. find which human pointclouds are not exited but have shadow joints file
     import os
-    shadow_file = np.load("data/robot_joints_file.npy")
+    if os.path.isfile("data/robot_joints_file.npy"):
+       shadow_file = np.load("data/robot_joints_file.npy")
+    else:
+        shadow_file =np.loadtxt(open("/data/shuang_data/Bighand2017/robot_joints_file.csv", "rb"), dtype='S30', delimiter=",", skiprows=0)
+        np.save('/data/shuang_data/Bighand2017/robot_joints_file.npy', shadow_file)
     human_img_list = os.listdir('data/points_no_pca/points_human/')
     human_img_list.sort()
     f_index = {}
     for ind, line in enumerate(human_img_list):
         f_index[line[:-4]] = ind
 
+    shadow_f = shadow_file[:40000,:]
     noimg_list = []
-    for i in shadow_file[:, 0]:
+    for i in shadow_f[:, 0]:
         try:
             # utf-8 is used here
             # because content in shadow_file[:, 0] is bytes string, not normal string
@@ -163,11 +168,11 @@ def label_generation():
 
     # 2. delete not consistent joint labels and save it
     delete_index = []
-    for i, tmp in enumerate(shadow_file[:, 0]):
+    for i, tmp in enumerate(shadow_f[:, 0]):
         if tmp[:-4].decode("utf-8") in noimg_array:
             print(tmp)
             delete_index += [i]
-    shadow_consist = np.delete(shadow_file, delete_index, 0)
+    shadow_consist = np.delete(shadow_f, delete_index, 0)
     np.random.shuffle(shadow_consist)
     np.save('data/robot_joints_file_consist_20K.npy', shadow_consist)
 

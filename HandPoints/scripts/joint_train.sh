@@ -20,7 +20,7 @@ DISPLAY_ENV=${NAME_BASE}_${NAME}
 GPU_ID=0,1
 
 # command
-python ./humansingle_main.py \
+python ./main.py \
   --gpu_ids ${GPU_ID} \
   --dataroot ${DATAROOT} \
   --name ${DISPLAY_ENV} \
