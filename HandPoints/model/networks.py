@@ -47,9 +47,9 @@ def define_G(netG, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[])
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    if netG == 'pointnet++':
+    if netG == 'pointnet2':
         net = PointNet2HandJointSSG()
-    elif netG == 'poinetnet':
+    elif netG == 'pointnet':
         net = PointNetCls()
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
@@ -173,7 +173,7 @@ class PointNet2HandJointSSG(nn.Module):
             PointnetSAModule(
                 npoint=512,
                 radius=0.15,
-                nsample=64,
+                nsample=30,
                 mlp=[0, 64, 64, 128],
                 use_xyz=True,
             )
@@ -182,7 +182,7 @@ class PointNet2HandJointSSG(nn.Module):
             PointnetSAModule(
                 npoint=128,
                 radius=0.15,
-                nsample=64,
+                nsample=30,
                 mlp=[128, 128, 128, 256],
                 use_xyz=True,
             )

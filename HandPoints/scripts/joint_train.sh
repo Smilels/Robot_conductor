@@ -2,7 +2,7 @@ set -ex
 
 # training parameters
 MODEL='humansingle'
-NETG='poinetnet' # pointnet++
+NETG='pointnet2' # pointnet++
 NORM='batch'
 BS=32
 LR=0.0001
