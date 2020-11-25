@@ -2,7 +2,6 @@ from __future__ import (absolute_import, division, print_function, unicode_liter
 import os
 import numpy as np
 import torch
-import torch.nn.functional as F
 from collections import OrderedDict
 from . import networks
 # python 3
@@ -175,7 +174,7 @@ class BaseModel(ABC):
 
     def get_test_losses(self, test_losses):
         """Return test losses / errors. train.py will print out these errors on console, and save them to a file"""
-        test_loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
+        test_loss_J_L2 = self.criterionL2(self.joint_angles, self.label)
         for name in self.loss_names:
             if isinstance(name, str):
                 if not any(name in item for item in test_losses.items()):

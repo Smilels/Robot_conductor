@@ -7,8 +7,6 @@
 # File Name  : humansingle_model.py
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from . import networks
 from .base_model import BaseModel
 from IPython import embed
@@ -31,6 +29,7 @@ class HumansingleModel(BaseModel):
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
             self.optimizers.append(self.optimizer_G)
+            self.criterionL2 = torch.nn.MSELoss()
 
         self.joint_upper_range = torch.tensor([0.349, 1.571, 1.571, 1.571, 0.785, 0.349, 1.571, 1.571,
                                                1.571, 0.349, 1.571, 1.571, 1.571, 0.349, 1.571, 1.571,
@@ -50,6 +49,6 @@ class HumansingleModel(BaseModel):
 
     def optimize_parameters(self):
         self.forward()
-        self.loss_J_L2 = F.mse_loss(self.joint_angles, self.label)
+        self.loss_J_L2 = self.criterionL2(self.joint_angles, self.label)
         self.loss_J_L2.backward()
         self.optimizer_G.step()
