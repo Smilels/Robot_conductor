@@ -8,8 +8,8 @@ BS=32
 LR=0.0001
 
 # dataset
-DATAROOT='./data/points_no_pca'
-NUM_POINTS=1024
+DATAROOT='./data/points_pca' # points_no_pca
+NUM_POINTS=512
 
 # naming
 DATE=`date '+%Y%m%d%H'`
@@ -20,7 +20,7 @@ DISPLAY_ENV=${NAME_BASE}_${NAME}
 GPU_ID=0,1
 
 # command
-python ./main.py \
+python ./main_pointnet.py \
   --gpu_ids ${GPU_ID} \
   --dataroot ${DATAROOT} \
   --name ${DISPLAY_ENV} \

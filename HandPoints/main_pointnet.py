@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # Author     : Shuang Li
 # E-mail     : sli@informatik.uni-hamburg.de
-# Description: 
+# Description:
 # Date       : 22/11/2020: 10:55
 # File Name  : main.py
 
@@ -49,7 +49,7 @@ args_test.isTrain = False
 test_loader = create_dataset(args_test)
 print("test data number is: ", len(test_loader.dataset))
 
-model = PointNetCls(num_points=1024, input_chann=3, k=22)
+model = PointNetCls(num_points=512, input_chann=3, k=22)
 
 if len(args.gpu_ids) > 0:
    torch.cuda.set_device(args.gpu_ids[0])
@@ -71,7 +71,7 @@ def train(model, loader, epoch):
     correct_human = [0, 0, 0]
     for batch_idx, (fname, human, target) in enumerate(loader):
         human, target = human.cuda(), target.cuda()
-
+        human = human.transpose(2,1)
         # shadow part
         optimizer.zero_grad()
         joint_human = model(human)
@@ -116,6 +116,7 @@ def test(model, loader):
     for fname, human, target in loader:
         human, target = human.cuda(), target.cuda()
 
+        human = human.transpose(2,1)
         # human part
         joint_human = model(human)
         joint_human = joint_human * (joint_upper_range - joint_lower_range) + joint_lower_range
@@ -145,7 +146,7 @@ def test(model, loader):
 
 def main():
     if args.phase== 'train':
-        for epoch in range(args.epoch_count, args.n_epochs + args.n_epochs_decay + 1):
+        for epoch in range(args.epoch_count, 400 + 1):
             acc_train_human, train_error_human = train(model, train_loader, epoch)
             print('Train done, acc_human={}, train_error_human={}'.format(
                 acc_train_human, train_error_human))
