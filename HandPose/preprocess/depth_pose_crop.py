@@ -28,7 +28,7 @@ if sys.argv[1] == "tams108":
     gt_file = "Human_label/text_annotation.txt"
 
 elif sys. argv[1] == "server":
-    base_path = "./data/"
+    base_path = "../data/depth_pose/"
     img_path = base_path + "images/"
     pose_path = os.path.join(base_path, "human_pose/")
     crop_img_path = base_path + "human_crop_seg_img/"

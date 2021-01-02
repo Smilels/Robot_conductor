@@ -5,7 +5,7 @@ BS=64
 LR=0.0001
 
 # dataset
-DATAROOT='./data/depth_pose' # points_no_pca
+DATAROOT='../data/depth_pose' # points_no_pca
 PREPROCESS='rotate_jitter' #resize_and_crop None
 #PREPROCESS='none' #resize_and_crop None
 

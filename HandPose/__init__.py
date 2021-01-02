@@ -1,1 +1,1 @@
-from HandPoints import dataloader, model
+from HandPose import dataloader, model
