@@ -59,32 +59,6 @@ class BaseDataset(data.Dataset, ABC):
         """
         pass
 
-
-def cv2_transform(opt, img, is_a=False):
-    img = img.astype(np.float32)
-    if 'resize' in opt.preprocess:
-        img = cv2.resize(img, (opt.load_size, opt.load_size))
-    if is_a and opt.phase == "train":
-        if 'rotate' in opt.preprocess:
-            angle = np.random.randint(-180, 180)
-            M = cv2.getRotationMatrix2D(((opt.load_size - 1) / 2.0, (opt.load_size - 1) / 2.0), angle, 1)
-            img = cv2.warpAffine(img, M, (opt.load_size, opt.load_size))
-
-        if 'jitter' in opt.preprocess:
-            min_img = np.min(img[img != 255.])
-            max_img = np.max(img[img != 255.])
-            delta = np.random.rand() * (255. - max_img + min_img) - min_img
-            img[img != 255.] += delta
-            img = img.clip(max=255., min=0.)
-
-
-    # Normalized
-    img = img / 255. * 2. - 1  # [-1, 1]
-    img = img[np.newaxis, ...]
-    img = torch.from_numpy(img)
-    return img
-
-
 def __print_size_warning(ow, oh, w, h):
     """Print warning information about image size(only print once)"""
     if not hasattr(__print_size_warning, 'has_printed'):

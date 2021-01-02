@@ -39,8 +39,7 @@ def pca_rotation(points):
 
 def robot_pca_rotation(points, transform):
     hand_points = points.copy()
-    hand_points_mean = hand_points.mean(axis=0)
-    hand_points_pca = np.dot(hand_points, transform.T) + hand_points_mean
+    hand_points_pca = np.dot(hand_points, transform.T)
     return hand_points_pca
 
 

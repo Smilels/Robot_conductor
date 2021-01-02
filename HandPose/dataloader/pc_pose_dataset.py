@@ -26,10 +26,10 @@ JOINT_NUM = 21
 class JointDataset(BaseDataset):
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
+        self.opt = opt
         self._cache = os.path.join(opt.dataroot, "sampled")  # get the image directory
         self.human_points_path = os.path.join(opt.dataroot, "points_human/")
         self.shadow_points_path = os.path.join(opt.dataroot, "points_shadow/")
-        self.opt = opt
         if opt.phase == "train":
             self.transforms = transforms.Compose(
                 [
@@ -53,13 +53,15 @@ class JointDataset(BaseDataset):
                     for i in tqdm.trange(len(self.label)):
                         tag = self.label[i]
                         fname = tag[0].decode("utf-8")
-                        target = tag[3:].astype(np.float32)
+                        # todo
+                        rot = tag[3:].astype(np.float32)
+                        trans = tag[3:].astype(np.float32)
                         human_points = np.load(os.path.join(
                             self.human_points_path, fname[:-4] + ".npy")).astype(np.float32)
                         txn.put(
                             str(i).encode(),
                             msgpack_numpy.packb(
-                                dict(frame=fname, pc=human_points, lbl=target), use_bin_type=True
+                                dict(frame=fname, pc=human_points, rot=rot, trans=trans), use_bin_type=True
                             ),
                         )
         self._lmdb_file = os.path.join(self._cache, "train" if self.transforms is not None else "test")
@@ -79,19 +81,28 @@ class JointDataset(BaseDataset):
             ele = msgpack_numpy.unpackb(txn.get(str(index).encode()), raw=False)
 
         points = np.array(ele["pc"])
+        points = self.preprocess(points, )
         pt_idxs = np.arange(0, self.num_points)
         np.random.shuffle(pt_idxs)
         human_points = points[pt_idxs, :]
 
+        rot = np.array(ele["rot"])
+        trans = np.array(ele["trans"])
+
         if self.transforms is not None:
-            human_points = self.transforms(human_points)
+            if self.opt.mormal:
+                human_points, rot, trans, normals = self.transforms(human_points, rot, trans)
+            else:
+                human_points, rot, trans = self.transforms(human_points, rot, trans)
 
-        return ele['frame'], human_points, np.array(ele["lbl"])
+        return ele['frame'], human_points, rot, trans
 
-    def preprocess(self, points):
+    def preprocess(self, points, rot, trans):
         # PCA rotation
         if self.opt.do_pca:
             points_pca, pc_transfrom = pca_rotation(points)
+            rot = np.dot(rot, pc_transfrom.T)
+            trans = np.dot(trans, pc_transfrom.T)
         else:
             points_pca = points
 
@@ -101,20 +112,22 @@ class JointDataset(BaseDataset):
         # FPS Sampling
         points_pca_fps_sampled, farthest_pts_idx = FPS_idx(points_pca_sampled, self.opt.fps_sample_num)
 
-        # compute surface normal
-        if self.opt.mormal:
-            normals_pca = get_normal(points_pca)
-            normals_pca_sampled = normals_pca[rand_ind]
-            normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
-
         # normalize point cloud
         if self.opt.normalization == "mean":
             points_normalized, points_mean = normalization_mean(points_pca_fps_sampled)
 
         elif self.opt.normalization == "unit":
             points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+            trans = (trans - offset)/max_bb3d_len
 
-        return points_normalized
+        # compute surface normal
+        if self.opt.mormal:
+            normals_pca = get_normal(points_pca)
+            normals_pca_sampled = normals_pca[rand_ind]
+            normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
+            return points_normalized, rot, trans, normals_pca_fps_sampled
+        else:
+            return points_normalized, rot, trans
 
     def __len__(self):
         return self._len

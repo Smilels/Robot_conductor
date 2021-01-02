@@ -38,7 +38,6 @@ class Map_Loader(object):
         mf_palm = keypoints[3] - keypoints[0]
         rf_palm = keypoints[4] - keypoints[0]
         lf_palm = keypoints[5] - keypoints[0]
-        # palm = np.array([tf_palm, ff_palm, mf_palm, rf_palm, lf_palm])
         palm = np.array([ff_palm, mf_palm, rf_palm, lf_palm])
 
         wrist_z = np.mean(palm, axis=0)
