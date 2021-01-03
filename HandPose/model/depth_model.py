@@ -477,12 +477,13 @@ class NewTeachingTeleGANModel(nn.Module):
 
 class NaiveTeleModel(nn.Module):
     ''' model with predict loss only '''
-    def __init__(self, input_size=100, embedding_size=64, joint_size=24):
+    def __init__(self, input_size=96, embedding_size=64, joint_size=12):
         super(NaiveTeleModel, self).__init__()
         self.base = BaseDeepConv(input_chann=1)
         # self.base = Resnet18Conv(input_chann=1)
         # self.feature_size = 512*((input_size//16)**2)
-        self.feature_size = 512*16
+        #self.feature_size = 512*16
+        self.feature_size = 512*9
         self.embedding_size = embedding_size
         self.joint_size = joint_size
 
@@ -494,15 +495,17 @@ class NaiveTeleModel(nn.Module):
             nn.Linear(self.embedding_size*4, self.embedding_size)
         )
 
-        self.human_reg = JointRegression(input_size=self.embedding_size, output_size=self.joint_size)
+        self.trans_reg = JointRegression(input_size=self.embedding_size, output_size=3)
+        self.rot_reg = JointRegression(input_size=self.embedding_size, output_size=3)
 
 
-    def forward(self, x, is_human):
+    def forward(self, x):
         x = self.base(x).view(-1, self.feature_size)
         embedding = self.encoder_human(x)
-        joint = self.human_reg(embedding)
+        trans = self.trans_reg(embedding)
+        rot = self.rot_reg(embedding)
 
-        return embedding, joint
+        return rot, trans
 
 
 class NewNaiveTeleModel(nn.Module):

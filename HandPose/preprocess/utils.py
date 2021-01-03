@@ -25,7 +25,7 @@ def cal_hand_pose(keypoints):
     wrist_x = np.cross(wrist_y, wrist_z)
     if np.linalg.norm(wrist_x) != 0:
         wrist_x /= np.linalg.norm(wrist_x)
-    hand_frame = np.vstack([wrist_x, wrist_y, wrist_z, ])
+    hand_frame = np.hstack([wrist_x, wrist_y, wrist_z])
     return hand_frame
 
 
@@ -88,10 +88,32 @@ def depth2pc(depth, centerX, centerY, focalLengthX, focalLengthY):
     return points_np
 
 
+def spilt():
+    import os
+    base_path = "/export/home/sli/code/Robot_conductor/data/depth_pose/"
+    if os.path.isfile(base_path + "human_pose.npy"):
+        pose_np = np.load(base_path + "human_pose.npy")
+    else:
+        pose_list = os.listdir(base_path + "human_pose/")
+        pose_list.sort()
+        pose_np = np.array(pose_list)
+        np.save(base_path + "human_pose.npy", pose_np)
+
+    label = pose_np[:100000]
+    train_sample = int(len(label) * 0.9)
+    train = label[:train_sample]
+    print(train.shape)
+    test = label[train_sample:]
+    print(test.shape)
+    np.save(base_path + "human_pose_10k.npy", pose_np[:100000])
+    np.save(base_path + "train_10k.npy", train)
+    np.save(base_path + "test_10k.npy", test)
+
+
 if __name__ == "__main__":
     # N, K = 80, 40
     # pts = np.random.random_sample((N, 2))
     # farthest_pts = FPS(pts, K)
     # show_paired_depth_images()
     # pass
-    depth2pc()
+    spilt()

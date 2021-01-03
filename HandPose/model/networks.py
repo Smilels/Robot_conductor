@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
-from pointnet2_ops.pointnet2_modules import PointnetSAModule
+#from pointnet2_ops.pointnet2_modules import PointnetSAModule
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Variable

@@ -26,14 +26,14 @@ import numpy as np
 from tensorboardX import SummaryWriter
 from torch.optim.lr_scheduler import StepLR
 import os
+from IPython import embed
 
 args = TrainOptions().parse()  # get training args
 logger = SummaryWriter(os.path.join('./log/', args.display_env))
 np.random.seed(int(time.time()))
 
 total_iters = 0  # the total number of training iterations
-pose_size = 6
-input_size = 96
+input_size = args.load_size 
 embedding_size = 128
 
 train_loader = create_dataset(args)
@@ -56,25 +56,24 @@ scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
 
 def train(model, loader, epoch):
-    scheduler.step()
     model.train()
     torch.set_grad_enabled(True)
     train_error_rot = 0
     train_error_trans = 0
     for batch_idx, (fname, human, label_rot, label_trans) in enumerate(loader):
         human, label_rot, label_trans = human.cuda(), label_rot.cuda(), label_trans.cuda()
-        # shadow part
         optimizer.zero_grad()
         pred_rot, pred_trans = model(human)
-        loss_rot = F.mse_loss(pred_rot, pred_rot)
+        # pred_trans[:, 2] = pred_trans[:, 2] 
+        loss_rot = F.mse_loss(pred_rot, label_rot)
         loss_trans = F.mse_loss(pred_trans, label_trans)
-        train_loss = loss_rot + loss_trans
+        train_loss = loss_rot + 10.0 * loss_trans
         train_loss.backward()
         optimizer.step()
 
         # compute average angle error
-        train_error_rot += F.l1_loss(pred_rot, pred_rot, size_average=False)
-        train_error_trans += F.l1_loss(pred_trans, label_trans, size_average=False)
+        train_error_rot += F.l1_loss(pred_rot, label_rot, reduction="sum")
+        train_error_trans += F.l1_loss(pred_trans, label_trans, reduction="sum")
 
         if batch_idx % args.print_freq == 0:
             if isinstance(train_loss, float):
@@ -95,6 +94,8 @@ def train(model, loader, epoch):
 
     train_error_rot /= len(loader.dataset)
     train_error_trans /= len(loader.dataset)
+    
+    scheduler.step()
     return train_error_rot, train_error_trans
 
 
@@ -108,14 +109,14 @@ def test(model, loader):
     for batch_idx, (fname, human, label_rot, label_trans) in enumerate(loader):
         human, label_rot, label_trans = human.cuda(), label_rot.cuda(), label_trans.cuda()
 
-        human = human.transpose(2,1)
         pred_rot, pred_trans = model(human)
+        # pred_trans[:, :2] = pred_trans[:, :2] * float(input_size) 
         test_loss_rot += F.mse_loss(pred_rot, label_rot)
         test_loss_trans += F.mse_loss(pred_trans, label_trans)
 
         # compute average angle error
-        test_error_rot += F.l1_loss(pred_rot, pred_rot, size_average=False)
-        test_error_trans += F.l1_loss(pred_trans, label_trans, size_average=False)
+        test_error_rot += F.l1_loss(pred_rot, label_rot, reduction="sum")
+        test_error_trans += F.l1_loss(pred_trans, label_trans, reduction="sum")
 
     test_loss_rot /= len(loader.dataset)
     test_loss_trans /= len(loader.dataset)
