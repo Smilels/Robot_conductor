@@ -4,7 +4,7 @@ set -ex
 MODEL='humansingle'
 NETG='pointnet' # pointnet++
 NORM='batch'
-BS=128
+BS=64
 LR=0.0001
 
 # dataset
@@ -14,13 +14,13 @@ NUM_POINTS=512
 # naming
 DATE=`date '+%Y%m%d%H'`
 N_EPOCH=200
+GPU_ID=2,3
 NAME_BASE=${DATE}_${MODEL}_${NETG}${NGF}_bs${BS}lr${LR}ep${N_EPOCH}
-NAME='20k_step50'
+NAME='10k'
 DISPLAY_ENV=${NAME_BASE}_${NAME}
-GPU_ID=3,4,5
 
 # command
-python ./main_pointnet.py \
+python ./humansingle_main.py \
   --gpu_ids ${GPU_ID} \
   --dataroot ${DATAROOT} \
   --name ${DISPLAY_ENV} \

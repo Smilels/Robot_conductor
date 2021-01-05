@@ -67,7 +67,7 @@ def train(model, loader, epoch):
         # pred_trans[:, 2] = pred_trans[:, 2] 
         loss_rot = F.mse_loss(pred_rot, label_rot)
         loss_trans = F.mse_loss(pred_trans, label_trans)
-        train_loss = loss_rot + 10.0 * loss_trans
+        train_loss = loss_rot + loss_trans
         train_loss.backward()
         optimizer.step()
 

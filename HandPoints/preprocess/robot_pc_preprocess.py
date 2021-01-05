@@ -47,10 +47,10 @@ if sys. argv[1] == "tams108":
     tf_path = os.path.join(base_path, "human_pca_tf/")
     points_path = os.path.join(base_path, "points_shadow/")
 elif sys. argv[1] == "server":
-    base_path = "./data/"
+    base_path = "/data/sli/BigHand2017/"
     img_path = base_path + "depth_shadow/"
-    tf_path = base_path + "points_pca/human_pca_tf/"
-    points_path = base_path + "points_pca/points_shadow/"
+    tf_path = base_path + "points_no_pca/human_pca_tf/"
+    points_path = base_path + "points_no_pca/shadow_points/"
     vis_points = 1
 
 if do_pca:
@@ -100,8 +100,8 @@ def get_shadow_points(item):
     normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
 
     # 6 normalize point cloud
-    #points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
-    points_normalized, max_bb3d_len, offset = normalization_mean(points_pca_fps_sampled)
+   # points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
+    points_normalized, _ = normalization_mean(points_pca_fps_sampled)
 
     if vis_points:
         pcd = o3d.geometry.PointCloud()

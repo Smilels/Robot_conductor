@@ -19,7 +19,7 @@ from scipy.spatial.transform import Rotation as R
 
 save_norm = 0
 show_bbx = 0
-do_pca = 1
+do_pca = 0
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -39,7 +39,7 @@ if sys. argv[1] == "tams108":
     gt_file = "Human_label/text_annotation.txt"
 
 elif sys. argv[1] == "server":
-    base_path = "./data/"
+    base_path = "/data/sli/Bighand2017/"
     img_path = base_path + "images/"
     tf_path = os.path.join(base_path, "points_no_pca/human_pca_tf/")
     pose_path = os.path.join(base_path, "human_pose/")
@@ -53,7 +53,6 @@ mat = np.array([[focalLengthX, 0, centerX], [0, focalLengthY, centerY], [0, 0, 1
 def get_human_points(line):
     # read the groundtruth and the image
     frame = line.split(' ')[0].replace("\t", "")
-    print(frame)
 
     # image path depends on the location of your training dataset
     try:
@@ -170,7 +169,7 @@ def get_human_points(line):
                         dtype=object)
         np.save(os.path.join(points_path, frame[:-4] + '.npy'), data)
     else:
-        data = np.array([points_normalized, points_mean],
+        data = np.array([points_normalized],
                         dtype=object)
         # data = np.array([points_normalized, max_bb3d_len, offset],
         #                 dtype=object)
@@ -181,9 +180,9 @@ def get_human_points(line):
             os.makedirs(tf_path)
         np.save(os.path.join(tf_path, frame[:-4] + '.npy'), pc_transfrom)
 
-    if not os.path.exists(pose_path):
-        os.makedirs(pose_path)
-    np.save(os.path.join(pose_path, frame[:-4] + '.npy'), hand_pose)
+    #if not os.path.exists(pose_path):
+    #    os.makedirs(pose_path)
+    #np.save(os.path.join(pose_path, frame[:-4] + '.npy'), hand_pose)
 
 
 def main():
@@ -197,7 +196,7 @@ def main():
     elif sys.argv[1] == "server":
         cores = mp.cpu_count()
         pool = mp.Pool(processes=cores)
-        pool.map(get_human_points, lines[:30000])
+        pool.map(get_human_points, lines[:400000])
 
     datafile.close()
 

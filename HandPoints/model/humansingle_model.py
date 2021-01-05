@@ -39,7 +39,7 @@ class HumansingleModel(BaseModel):
 
     def set_input(self, input):
         frame, pc, label = input
-        # pc = pc.transpose(2, 1)
+        pc = pc.transpose(2, 1)
         self.pc = pc.to(self.device)
         self.label = label.to(self.device)
 
@@ -49,6 +49,7 @@ class HumansingleModel(BaseModel):
 
     def optimize_parameters(self):
         self.forward()
+        self.optimizer_G.zero_grad()
         self.loss_J_L2 = self.criterionL2(self.joint_angles, self.label)
         self.loss_J_L2.backward()
         self.optimizer_G.step()

@@ -236,18 +236,19 @@ class PointcloudRandomInputDropout(object):
 def label_generation():
     # 1. find which human pointclouds are not exited but have shadow joints file
     import os
-    if os.path.isfile("data/robot_joints_file.npy"):
-       shadow_file = np.load("data/robot_joints_file.npy")
+    if os.path.isfile("../data/robot_joints_file.npy"):
+       shadow_file = np.load("../data/robot_joints_file.npy")
     else:
-        shadow_file =np.loadtxt(open("/data/shuang_data/Bighand2017/robot_joints_file.csv", "rb"), dtype='S30', delimiter=",", skiprows=0)
-        np.save('/data/shuang_data/Bighand2017/robot_joints_file.npy', shadow_file)
-    human_img_list = os.listdir('data/points_no_pca/points_human/')
+        shadow_file =np.loadtxt(open("/data/sli/Bighand2017/robot_joints_file.csv", "rb"), dtype='S30', delimiter=",", skiprows=0)
+        np.save('/data/sli/Bighand2017/robot_joints_file.npy', shadow_file)
+    human_img_list = os.listdir('../data/points_no_pca/human_points/')
     human_img_list.sort()
     f_index = {}
     for ind, line in enumerate(human_img_list):
         f_index[line[:-4]] = ind
 
-    shadow_f = shadow_file[:40000,:]
+    shadow_f = shadow_file
+    print(len(shadow_file))
     noimg_list = []
     for i in shadow_f[:, 0]:
         try:
@@ -262,20 +263,22 @@ def label_generation():
     delete_index = []
     for i, tmp in enumerate(shadow_f[:, 0]):
         if tmp[:-4].decode("utf-8") in noimg_array:
-            print(tmp)
+            print(tmp, "no human file")
             delete_index += [i]
     shadow_consist = np.delete(shadow_f, delete_index, 0)
-    np.random.shuffle(shadow_consist)
-    np.save('data/robot_joints_file_consist_20K.npy', shadow_consist)
+    # np.random.shuffle(shadow_consist)
+    np.save('../data/points_no_pca/robot_joints_file_consist_20K.npy', shadow_consist)
 
     # spilt joint labels to train and test dataset
-    label = shadow_consist[:20000]
+    label = shadow_consist[:200000]
     # label = shadow_consist
-    train_sample = int(len(label) * 0.8)
+    train_sample = int(len(label) * 0.9)
     train = label[:train_sample]
     test = label[train_sample:]
-    np.save('data/points_no_pca/train.npy', train)
-    np.save('data/points_no_pca/test.npy', test)
+    print(train.shape)
+    print(test.shape)
+    np.save('../data/points_no_pca/train_20k.npy', train)
+    np.save('../data/points_no_pca/test_20k.npy', test)
 
 
 if __name__ == "__main__":
