@@ -80,6 +80,9 @@ def inner(inner_edge, img, zero_as_infty, fore_thresh, mask, gap, thresh, x, y, 
 
 def seg_hand_depth(img, gap=100, thresh=500, padding=10, output_size=96, scale=10, add=5, box_z=250,
                    zero_as_infty=False, fore_p_thresh=300, label=None, norm=True):
+    img = img.astype(np.float32)
+    # embed()
+    # img[np.where(img>500)] = 0
     if zero_as_infty:
         # TODO: for some sensor that maps infty as 0, we should override them
         thresh = np.inf

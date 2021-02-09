@@ -64,7 +64,8 @@ def crop_depth_img(img_ori, uvd, padding):
     return img, trans, np.array([x_max, x_min, y_max, y_min])
 
 
-def uvd2pc(uvd, centerX, centerY, focalLengthX, focalLengthY):
+def uvd2pc(uvd_ori, centerX, centerY, focalLengthX, focalLengthY):
+    uvd = uvd_ori.copy()
     v = uvd[0][1]
     u = uvd[0][0]
     Z = uvd[0][2]

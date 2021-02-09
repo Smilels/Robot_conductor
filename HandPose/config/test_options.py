@@ -11,8 +11,9 @@ class TestOptions(BaseOptions):
         parser = BaseOptions.initialize(self, parser)
         # visdom and HTML visualization parameters
         parser.add_argument('--phase', type=str, default='test', help='train, val, test, etc')
-
+        parser.add_argument('--eval', action='store_true', help='use eval mode during test time.')
         # training parameters
+        parser.set_defaults(load_size=parser.get_default('crop_size'))
         parser.add_argument('--n_epochs', type=int, default=100, help='number of epochs with the initial learning rate')
         parser.add_argument('--n_epochs_decay', type=int, default=100, help='number of epochs to linearly decay learning rate to zero')
         self.isTrain = False
