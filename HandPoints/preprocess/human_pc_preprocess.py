@@ -18,7 +18,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 save_norm = 0
-show_bbx = 0
+show_bbx = 1
 do_pca = 0
 
 focalLengthX = 475.065948
@@ -105,6 +105,8 @@ def get_human_points(line):
     # 3 PCA rotation
     if do_pca:
         points_pca, pc_transfrom = pca_rotation(points)
+        keypoints = np.dot(keypoints, pc_transfrom.T)
+
     else:
         points_pca = points
 
@@ -122,6 +124,9 @@ def get_human_points(line):
     # 9 normalize point cloud
     # points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
     points_normalized, points_mean = normalization_mean(points_pca_fps_sampled)
+
+    # 10 normalized keypoints
+    keypoints = keypoints - points_mean
 
     if show_bbx:
         pcd = o3d.geometry.PointCloud()
@@ -141,13 +146,13 @@ def get_human_points(line):
         pcd_key.points = o3d.utility.Vector3dVector(keypoints)
         pcd_key.paint_uniform_color([0.1, 0.1, 0.7])
         # points after pca transformation
-        pcd_pca.points = o3d.utility.Vector3dVector(points_pca)
+        pcd_pca.points = o3d.utility.Vector3dVector(points_pca+ np.array([300, 0, 0]))
         pcd_pca.paint_uniform_color([0.1, 0.9, 0.5])  # green
         # random downsampling of pca points
         pcd_pca_sample.points = o3d.utility.Vector3dVector(points_pca_sampled)
         pcd_pca_sample.paint_uniform_color([0.1, 0.1, 0.7])  # blue
         # fps sampled points
-        pcd_fps_sample.points = o3d.utility.Vector3dVector(points_pca_fps_sampled + np.array([200, 0, 0]))
+        pcd_fps_sample.points = o3d.utility.Vector3dVector(points_pca_fps_sampled + np.array([600, 0, 0]))
         pcd_fps_sample.paint_uniform_color([0.1, 0.1, 0.7])  # green
 
         # the values of the normalized points are in [-0.5,0.5],
@@ -158,7 +163,7 @@ def get_human_points(line):
         world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[0, 0, 0])
 
-        o3d.visualization.draw_geometries([pcd_normalized], point_show_normal=False)
+        o3d.visualization.draw_geometries([pcd_key, pcd_normalized], point_show_normal=False)
 
     if not os.path.exists(points_path):
         os.makedirs(points_path)
@@ -169,7 +174,7 @@ def get_human_points(line):
                         dtype=object)
         np.save(os.path.join(points_path, frame[:-4] + '.npy'), data)
     else:
-        data = np.array([points_normalized],
+        data = np.array([points_normalized, keypoints],
                         dtype=object)
         # data = np.array([points_normalized, max_bb3d_len, offset],
         #                 dtype=object)

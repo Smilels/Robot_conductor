@@ -15,21 +15,24 @@ import numpy as np
 import lmdb
 import msgpack_numpy
 import tqdm
-import dataloader.data_utils as d_utils, pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx, normalization_mean
+import dataloader.data_utils as d_utils
 from dataloader.base_dataset import BaseDataset
 from IPython import embed
+from utils import depth2pc, pca_rotation, down_sample, get_normal, normalization_unit, FPS_idx, normalization_mean
+import dataloader.data_utils as d_utils
 
-SAMPLE_NUM = 1024
-JOINT_NUM = 21
+
+DOWN_SAMPLE_NUM = 2048
+FPS_SAMPLE_NUM = 1024
 
 
-class JointDataset(BaseDataset):
+class KeypointsDataset(BaseDataset):
     def __init__(self, opt):
         BaseDataset.__init__(self, opt)
-        self._cache = os.path.join(opt.dataroot, "sampled")  # get the image directory
-        self.human_points_path = os.path.join(opt.dataroot, "points_human/")
+        self._cache = os.path.join(opt.dataroot, "sampled_20k")  # get the image directory
+        self.human_points_path = os.path.join(opt.dataroot, "human_points/")
         self.shadow_points_path = os.path.join(opt.dataroot, "points_shadow/")
-        self.opt = opt
+
         if opt.phase == "train":
             self.transforms = transforms.Compose(
                 [
@@ -45,7 +48,7 @@ class JointDataset(BaseDataset):
         if not os.path.exists(self._cache):
             os.makedirs(self._cache)
 
-            for split in ["train", "test"]:
+            for split in ["train_20k", "test_20k"]:
                 self.label = np.load(os.path.join(opt.dataroot, split+".npy"))
                 with lmdb.open(
                     os.path.join(self._cache, split), map_size=1 << 36
@@ -53,16 +56,15 @@ class JointDataset(BaseDataset):
                     for i in tqdm.trange(len(self.label)):
                         tag = self.label[i]
                         fname = tag[0].decode("utf-8")
-                        target = tag[3:].astype(np.float32)
-                        human_points = np.load(os.path.join(
-                            self.human_points_path, fname[:-4] + ".npy")).astype(np.float32)
+                        human_points, target = np.load(os.path.join(
+                            self.human_points_path, fname[:-4] + ".npy"), allow_pickle=True).astype(np.float32)
                         txn.put(
                             str(i).encode(),
                             msgpack_numpy.packb(
                                 dict(frame=fname, pc=human_points, lbl=target), use_bin_type=True
                             ),
                         )
-        self._lmdb_file = os.path.join(self._cache, "train" if self.transforms is not None else "test")
+        self._lmdb_file = os.path.join(self._cache, "train_20k" if self.transforms is not None else "test_20k")
         with lmdb.open(self._lmdb_file, map_size=1 << 36) as lmdb_env:
             self._len = lmdb_env.stat()["entries"]
 
@@ -78,50 +80,35 @@ class JointDataset(BaseDataset):
         with self._lmdb_env.begin(buffers=True) as txn:
             ele = msgpack_numpy.unpackb(txn.get(str(index).encode()), raw=False)
 
-        points = np.array(ele["pc"])
+        points = np.squeeze(np.array(ele["pc"]))
+        target = np.array(ele["lbl"])
+
+        # downsampling
+        points_sampled, rand_ind = down_sample(points, DOWN_SAMPLE_NUM)
+
+        # FPS Sampling
+        points_fps_sampled, farthest_pts_idx = FPS_idx(points_sampled, self.num_points)
+
+        # normalization
+        points_normalized = points_fps_sampled - points_fps_sampled.mean(axis=0)
+        target = target - points_fps_sampled.mean(axis=0)
+
+        # shuffle
         pt_idxs = np.arange(0, self.num_points)
         np.random.shuffle(pt_idxs)
-        human_points = points[pt_idxs, :]
+        human_points = points_normalized[pt_idxs, :]
 
         if self.transforms is not None:
             human_points = self.transforms(human_points)
 
-        return ele['frame'], human_points, np.array(ele["lbl"])
-
-    def preprocess(self, points):
-        # PCA rotation
-        if self.opt.do_pca:
-            points_pca, pc_transfrom = pca_rotation(points)
-        else:
-            points_pca = points
-
-        # downsampling
-        points_pca_sampled, rand_ind = down_sample(points_pca, self.opt.downsample_num)
-
-        # FPS Sampling
-        points_pca_fps_sampled, farthest_pts_idx = FPS_idx(points_pca_sampled, self.opt.fps_sample_num)
-
-        # compute surface normal
-        if self.opt.mormal:
-            normals_pca = get_normal(points_pca)
-            normals_pca_sampled = normals_pca[rand_ind]
-            normals_pca_fps_sampled = normals_pca_sampled[farthest_pts_idx]
-
-        # normalize point cloud
-        if self.opt.normalization == "mean":
-            points_normalized, points_mean = normalization_mean(points_pca_fps_sampled)
-
-        elif self.opt.normalization == "unit":
-            points_normalized, max_bb3d_len, offset = normalization_unit(points_pca_fps_sampled)
-
-        return points_normalized
+        return ele['frame'], human_points, target, points_fps_sampled.mean(axis=0)
 
     def __len__(self):
         return self._len
 
 
 if __name__ == "__main__":
-    dset = JointDataset(train=True)
+    dset = KeypointsDataset(train=True)
     print(dset[1000][0])
     print(dset[1000][1])
     print(len(dset))

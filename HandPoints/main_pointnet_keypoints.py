@@ -21,7 +21,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 from tensorboardX import SummaryWriter
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 import os
 
 args = TrainOptions().parse()  # get training argsions
@@ -29,13 +29,8 @@ logger = SummaryWriter(os.path.join('./log/', args.display_env))
 np.random.seed(int(time.time()))
 
 total_iters = 0  # the total number of training iterations
-thresh_acc = [0.2, 0.25, 0.3]
-joint_size = 22
-joint_upper_range = torch.tensor([0.349, 1.571, 1.571, 1.571, 0.785, 0.349, 1.571, 1.571,
-                                  1.571, 0.349, 1.571, 1.571, 1.571, 0.349, 1.571, 1.571,
-                                  1.571, 1.047, 1.222, 0.209, 0.524, 1.571])
-joint_lower_range = torch.tensor([-0.349, 0, 0, 0, 0, -0.349, 0, 0, 0, -0.349, 0, 0, 0,
-                                  -0.349, 0, 0, 0, -1.047, 0, -0.209, -0.524, 0])
+thresh_acc = [4, 5, 6, 7]
+keypoints_aize = 63
 
 train_loader = create_dataset(args)
 print('The number of training images = %d' % len(train_loader))
@@ -52,11 +47,10 @@ if len(args.gpu_ids) > 0:
    model.to(args.gpu_ids[0])
    model = nn.DataParallel(model, device_ids=args.gpu_ids).cuda()
 
-joint_upper_range = joint_upper_range.cuda()
-joint_lower_range = joint_lower_range.cuda()
-
-optimizer = optim.Adam(model.parameters(), lr=args.lr)
-scheduler = StepLR(optimizer, step_size=30, gamma=0.5)
+#optimizer = optim.Adam(model.parameters(), lr=args.lr)
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+# scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
+scheduler = CosineAnnealingLR(optimizer, 300, eta_min=args.lr)
 
 
 def train(model, loader, epoch):
@@ -64,27 +58,26 @@ def train(model, loader, epoch):
     model.train()
     torch.set_grad_enabled(True)
     train_error_human = 0
-    correct_human = [0, 0, 0]
-    for batch_idx, (fname, human, target) in enumerate(loader):
+    correct_human = [0, 0, 0, 0]
+    for batch_idx, (fname, human, target, mean) in enumerate(loader):
         human, target = human.cuda(), target.cuda()
-        human = human.transpose(2,1)
+        human = human.transpose(2, 1)
         # shadow part
         optimizer.zero_grad()
-        joint_human = model(human)
-        joint_human = joint_human * (joint_upper_range - joint_lower_range) + joint_lower_range
-        loss_human = F.mse_loss(joint_human, target)
+        keypoints_human = model(human)
+        loss_human = F.mse_loss(keypoints_human, target)
 
         loss_human.backward()
         optimizer.step()
 
         # compute acc
-        res_human = [np.sum(np.sum(abs(joint_human.cpu().data.numpy() -
+        res_human = [np.sum(np.sum(abs(keypoints_human.cpu().data.numpy() -
                                        target.cpu().data.numpy()) < thresh,
-                                       axis=-1) == joint_size) for thresh in thresh_acc]
+                                       axis=-1) == keypoints_aize) for thresh in thresh_acc]
         correct_human = [c + r for c, r in zip(correct_human, res_human)]
 
         # compute average angle error
-        train_error_human += F.l1_loss(joint_human, target, size_average=False) / joint_size
+        train_error_human += F.l1_loss(keypoints_human, target, size_average=False) / keypoints_aize
 
         if batch_idx % args.print_freq == 0:
             if isinstance(loss_human, float):
@@ -107,25 +100,25 @@ def test(model, loader):
     model.eval()
     torch.set_grad_enabled(False)
     test_loss_human = 0
-    correct_human = [0, 0, 0]
+    correct_human = [0, 0, 0, 0]
     test_error_human = 0
-    for fname, human, target in loader:
+    for fname, human, target, mean in loader:
         human, target = human.cuda(), target.cuda()
 
-        human = human.transpose(2,1)
+        human = human.transpose(2, 1)
         # human part
-        joint_human = model(human)
-        joint_human = joint_human * (joint_upper_range - joint_lower_range) + joint_lower_range
-        test_loss_human += F.mse_loss(joint_human, target, size_average=False).item()
+        keypoints_human = model(human)
+        keypoints_human += mean
+        test_loss_human += F.mse_loss(keypoints_human, target, size_average=False).item()
 
         # compute acc
-        res_human = [np.sum(np.sum(abs(joint_human.cpu().data.numpy()
+        res_human = [np.sum(np.sum(abs(keypoints_human.cpu().data.numpy()
                                        - target.cpu().data.numpy()) < thresh,
-                                       axis=-1) == joint_size) for thresh in thresh_acc]
+                                       axis=-1) == keypoints_aize) for thresh in thresh_acc]
         correct_human = [c + r for c, r in zip(correct_human, res_human)]
 
         # compute average angle error
-        test_error_human += F.l1_loss(joint_human, target, size_average=False) / joint_size
+        test_error_human += F.l1_loss(keypoints_human, target, size_average=False) / keypoints_aize
 
     test_loss_human /= len(loader.dataset)
     test_error_human /= len(loader.dataset)
@@ -150,13 +143,15 @@ def main():
             print(
                 'Test done, acc_human={}, error_human ={}, loss_test_human={}'.
                     format(acc_test_human, test_error_human, loss_test_human))
-            logger.add_scalar('train_acc_human0.2', acc_train_human[0], epoch)
-            logger.add_scalar('train_acc_human0.25', acc_train_human[1], epoch)
-            logger.add_scalar('train_acc_human0.3', acc_train_human[2], epoch)
+            logger.add_scalar('train_acc_human4', acc_train_human[0], epoch)
+            logger.add_scalar('train_acc_human5', acc_train_human[1], epoch)
+            logger.add_scalar('train_acc_human6', acc_train_human[2], epoch)
+            logger.add_scalar('train_acc_human7', acc_train_human[3], epoch)
 
-            logger.add_scalar('test_acc_human0.2', acc_test_human[0], epoch)
-            logger.add_scalar('test_acc_human0.25', acc_test_human[1], epoch)
-            logger.add_scalar('test_acc_human0.3', acc_test_human[2], epoch)
+            logger.add_scalar('test_acc_human4', acc_test_human[0], epoch)
+            logger.add_scalar('test_acc_human5', acc_test_human[1], epoch)
+            logger.add_scalar('test_acc_human6', acc_test_human[2], epoch)
+            logger.add_scalar('test_acc_human7', acc_test_human[3], epoch)
 
             logger.add_scalar('test_error_human', test_error_human, epoch)
             logger.add_scalar('test_loss_human', loss_test_human, epoch)
