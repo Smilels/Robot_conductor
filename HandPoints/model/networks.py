@@ -9,6 +9,7 @@ from pointnet2_ops.pointnet2_modules import PointnetSAModule
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Variable
+from .utils import sample_and_group 
 
 
 ###############################################################################
@@ -16,7 +17,7 @@ from torch.autograd import Variable
 ###############################################################################
 
 
-def define_G(netG, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
+def define_G(netG, num_points= 2500, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[]):
     """Create a generator
 
     Parameters:
@@ -31,17 +32,6 @@ def define_G(netG, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[])
         gpu_ids (int list) -- which GPUs the network runs on: e.g., 0,1,2
 
     Returns a generator
-
-    Our current implementation provides two types of generators:
-        U-Net: [unet_128] (for 128x128 input images) and [unet_256] (for 256x256 input images)
-        The original U-Net paper: https://arxiv.org/abs/1505.04597
-
-        Resnet-based generator: [resnet_6blocks] (with 6 Resnet blocks) and [resnet_9blocks] (with 9 Resnet blocks)
-        Resnet-based generator consists of several Resnet blocks between a few downsampling/upsampling operations.
-        We adapt Torch code from Justin Johnson's neural style transfer project (https://github.com/jcjohnson/fast-neural-style).
-
-
-    The generator has been initialized by <init_net>. It uses RELU for non-linearity.
     """
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
@@ -49,7 +39,9 @@ def define_G(netG, norm='batch', init_type='normal', init_gain=0.02, gpu_ids=[])
     if netG == 'pointnet2':
         net = PointNet2HandJointSSG()
     elif netG == 'pointnet':
-        net = PointNetCls()
+        net = PointNetCls_xj(num_points=num_points)
+    elif netG == 'pct':
+        net = Pct()
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
@@ -220,6 +212,47 @@ class PointNet2HandJointSSG(nn.Module):
         return self.fc_layer(features.squeeze(-1))
 
 
+class STN3d(nn.Module):
+    def __init__(self, num_points=2500, input_chann=3):
+        super(STN3d, self).__init__()
+        self.num_points = num_points
+        self.conv1 = torch.nn.Conv1d(input_chann, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+        self.mp1 = torch.nn.MaxPool1d(num_points)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 9)
+        self.relu = nn.ReLU()
+
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(1024)
+        self.bn4 = nn.BatchNorm1d(512)
+        self.bn5 = nn.BatchNorm1d(256)
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = self.mp1(x)
+        x = x.view(-1, 1024)
+
+        x = F.relu(self.bn4(self.fc1(x)))
+        x = F.relu(self.bn5(self.fc2(x)))
+        x = self.fc3(x)
+
+        iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(
+            batchsize, 1)
+        if x.is_cuda:
+            iden = iden.cuda()
+        x = x + iden
+        x = x.view(-1, 3, 3)
+        return x
+
+
+
 class PointNetfeat(nn.Module):
     def __init__(self, global_feat=True, feature_transform=False):
         super(PointNetfeat, self).__init__()
@@ -263,6 +296,64 @@ class PointNetfeat(nn.Module):
             return torch.cat([x, pointfeat], 1), trans, trans_feat
 
 
+class PointNetfeat_xj(nn.Module):
+    def __init__(self, num_points=2500, input_chann=3, global_feat=True):
+        super(PointNetfeat_xj, self).__init__()
+        self.stn = STN3d(num_points=num_points, input_chann=input_chann)
+        self.conv1 = torch.nn.Conv1d(input_chann, 64, 1)
+        self.conv2 = torch.nn.Conv1d(64, 128, 1)
+        self.conv3 = torch.nn.Conv1d(128, 256, 1)
+        self.conv4 = torch.nn.Conv1d(256, 1024, 1)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.bn3 = nn.BatchNorm1d(256)
+        self.bn4 = nn.BatchNorm1d(1024)
+        self.mp1 = torch.nn.MaxPool1d(num_points)
+        self.num_points = num_points
+        self.global_feat = global_feat
+
+    def forward(self, x):
+        batchsize = x.size()[0]
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        x = torch.bmm(x, trans)
+        # x = torch.cat([torch.bmm(x[..., 0:3], trans), torch.bmm(x[..., 3:6], trans)], dim=-1)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        pointfeat = x
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = self.bn4(self.conv4(x))
+        x = self.mp1(x)
+        x = x.view(-1, 1024)
+        if self.global_feat:
+            return x, trans
+        else:
+            x = x.view(-1, 1024, 1).repeat(1, 1, self.num_points)
+            return torch.cat([x, pointfeat], 1), trans
+
+class PointNetCls_xj(nn.Module):
+    def __init__(self, num_points=2500, input_chann=3, k=22):
+        super(PointNetCls_xj, self).__init__()
+        self.num_points = num_points
+        self.feat = PointNetfeat_xj(num_points, input_chann=input_chann, global_feat=True)
+        self.fc1 = nn.Linear(1024, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, 64)
+        self.fc4 = nn.Linear(64, k)
+        self.bn1 = nn.BatchNorm1d(512)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x, trans = self.feat(x)
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = F.relu(self.bn2(self.fc2(x)))
+        x = F.relu(self.bn3(self.fc3(x)))
+        x = self.fc4(x)
+        return x
+
 class PointNetCls(nn.Module):
     def __init__(self, k=22, feature_transform=False):
         super(PointNetCls, self).__init__()
@@ -284,43 +375,181 @@ class PointNetCls(nn.Module):
         return x
 
 
-class STN3d(nn.Module):
-    def __init__(self):
-        super(STN3d, self).__init__()
-        self.conv1 = torch.nn.Conv1d(3, 64, 1)
-        self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.conv3 = torch.nn.Conv1d(128, 1024, 1)
-        self.fc1 = nn.Linear(1024, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 9)
-        self.relu = nn.ReLU()
-
+class Pct(nn.Module):
+    def __init__(self, output_channels=22):
+        super(Pct, self).__init__()
+        self.conv1 = nn.Conv1d(3, 64, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(64, 64, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm1d(64)
-        self.bn2 = nn.BatchNorm1d(128)
-        self.bn3 = nn.BatchNorm1d(1024)
-        self.bn4 = nn.BatchNorm1d(512)
-        self.bn5 = nn.BatchNorm1d(256)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.gather_local_0 = Local_op(in_channels=128, out_channels=128)
+        self.gather_local_1 = Local_op(in_channels=256, out_channels=256)
+
+        self.pt_last = Point_Transformer_Last()
+
+        self.conv_fuse = nn.Sequential(nn.Conv1d(1280, 1024, kernel_size=1, bias=False),
+                                    nn.BatchNorm1d(1024),
+                                    nn.LeakyReLU(negative_slope=0.2))
+
+
+        self.linear1 = nn.Linear(1024, 512, bias=False)
+        self.bn6 = nn.BatchNorm1d(512)
+        self.dp1 = nn.Dropout(0.5)
+        self.linear2 = nn.Linear(512, 256)
+        self.bn7 = nn.BatchNorm1d(256)
+        self.dp2 = nn.Dropout(0.5)
+        self.linear3 = nn.Linear(256, output_channels)
 
     def forward(self, x):
-        batchsize = x.size()[0]
+        xyz = x.permute(0, 2, 1)
+        batch_size, _, _ = x.size()
+        # B, D, N
         x = F.relu(self.bn1(self.conv1(x)))
+        # B, D, N
         x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = torch.max(x, 2, keepdim=True)[0]
-        x = x.view(-1, 1024)
+        x = x.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=512, radius=0.15, nsample=32, xyz=xyz, points=x)         
+        feature_0 = self.gather_local_0(new_feature)
+        feature = feature_0.permute(0, 2, 1)
+        new_xyz, new_feature = sample_and_group(npoint=256, radius=0.2, nsample=32, xyz=new_xyz, points=feature) 
+        feature_1 = self.gather_local_1(new_feature)
 
-        x = F.relu(self.bn4(self.fc1(x)))
-        x = F.relu(self.bn5(self.fc2(x)))
-        x = self.fc3(x)
+        x = self.pt_last(feature_1)
+        x = torch.cat([x, feature_1], dim=1)
+        x = self.conv_fuse(x)
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = F.leaky_relu(self.bn6(self.linear1(x)), negative_slope=0.2)
+        x = self.dp1(x)
+        x = F.leaky_relu(self.bn7(self.linear2(x)), negative_slope=0.2)
+        x = self.dp2(x)
+        x = self.linear3(x)
 
-        iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(
-            batchsize, 1)
-        if x.is_cuda:
-            iden = iden.cuda()
-        x = x + iden
-        x = x.view(-1, 3, 3)
         return x
 
+
+class Local_op(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(Local_op, self).__init__()
+        self.conv1 = nn.Conv1d(in_channels, out_channels, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(out_channels, out_channels, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm1d(out_channels)
+        self.bn2 = nn.BatchNorm1d(out_channels)
+
+    def forward(self, x):
+        b, n, s, d = x.size()  # torch.Size([32, 512, 32, 6]) 
+        x = x.permute(0, 1, 3, 2)   
+        x = x.reshape(-1, d, s) 
+        batch_size, _, N = x.size()
+        x = F.relu(self.bn1(self.conv1(x))) # B, D, N
+        x = F.relu(self.bn2(self.conv2(x))) # B, D, N
+        x = F.adaptive_max_pool1d(x, 1).view(batch_size, -1)
+        x = x.reshape(b, n, -1).permute(0, 2, 1)
+        return x
+
+
+class Point_Transformer_Last(nn.Module):
+    def __init__(self, channels=256):
+        super(Point_Transformer_Last, self).__init__()
+        self.conv1 = nn.Conv1d(channels, channels, kernel_size=1, bias=False)
+        self.conv2 = nn.Conv1d(channels, channels, kernel_size=1, bias=False)
+
+        self.bn1 = nn.BatchNorm1d(channels)
+        self.bn2 = nn.BatchNorm1d(channels)
+
+        self.sa1 = SA_Layer(channels)
+        self.sa2 = SA_Layer(channels)
+        self.sa3 = SA_Layer(channels)
+        self.sa4 = SA_Layer(channels)
+
+    def forward(self, x):
+        # 
+        # b, 3, npoint, nsample  
+        # conv2d 3 -> 128 channels 1, 1
+        # b * npoint, c, nsample 
+        # permute reshape
+        batch_size, _, N = x.size()
+
+        # B, D, N
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x1 = self.sa1(x)
+        x2 = self.sa2(x1)
+        x3 = self.sa3(x2)
+        x4 = self.sa4(x3)
+        x = torch.cat((x1, x2, x3, x4), dim=1)
+
+        return x
+
+
+class SA_Layer(nn.Module):
+    def __init__(self, channels):
+        super(SA_Layer, self).__init__()
+        self.q_conv = nn.Conv1d(channels, channels // 4, 1, bias=False)
+        self.k_conv = nn.Conv1d(channels, channels // 4, 1, bias=False)
+        self.q_conv.weight = self.k_conv.weight
+        self.q_conv.bias = self.k_conv.bias
+
+        self.v_conv = nn.Conv1d(channels, channels, 1)
+        self.trans_conv = nn.Conv1d(channels, channels, 1)
+        self.after_norm = nn.BatchNorm1d(channels)
+        self.act = nn.ReLU()
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        # b, n, c
+        x_q = self.q_conv(x).permute(0, 2, 1)
+        # b, c, n
+        x_k = self.k_conv(x)
+        x_v = self.v_conv(x)
+        # b, n, n
+        energy = torch.bmm(x_q, x_k)
+
+        attention = self.softmax(energy)
+        attention = attention / (1e-9 + attention.sum(dim=1, keepdim=True))
+        # b, c, n
+        x_r = torch.bmm(x_v, attention)
+        x_r = self.act(self.after_norm(self.trans_conv(x - x_r)))
+        x = x + x_r
+        return x
+
+
+# class STN3d(nn.Module):
+#     def __init__(self):
+#         super(STN3d, self).__init__()
+#         self.conv1 = torch.nn.Conv1d(3, 64, 1)
+#         self.conv2 = torch.nn.Conv1d(64, 128, 1)
+#         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
+#         self.fc1 = nn.Linear(1024, 512)
+#         self.fc2 = nn.Linear(512, 256)
+#         self.fc3 = nn.Linear(256, 9)
+#         self.relu = nn.ReLU()
+# 
+#         self.bn1 = nn.BatchNorm1d(64)
+#         self.bn2 = nn.BatchNorm1d(128)
+#         self.bn3 = nn.BatchNorm1d(1024)
+#         self.bn4 = nn.BatchNorm1d(512)
+#         self.bn5 = nn.BatchNorm1d(256)
+# 
+#     def forward(self, x):
+#         batchsize = x.size()[0]
+#         x = F.relu(self.bn1(self.conv1(x)))
+#         x = F.relu(self.bn2(self.conv2(x)))
+#         x = F.relu(self.bn3(self.conv3(x)))
+#         x = torch.max(x, 2, keepdim=True)[0]
+#         x = x.view(-1, 1024)
+# 
+#         x = F.relu(self.bn4(self.fc1(x)))
+#         x = F.relu(self.bn5(self.fc2(x)))
+#         x = self.fc3(x)
+# 
+#         iden = Variable(torch.from_numpy(np.array([1, 0, 0, 0, 1, 0, 0, 0, 1]).astype(np.float32))).view(1, 9).repeat(
+#             batchsize, 1)
+#         if x.is_cuda:
+#             iden = iden.cuda()
+#         x = x + iden
+#         x = x.view(-1, 3, 3)
+#         return x
+# 
 
 class STNkd(nn.Module):
     def __init__(self, k=64):

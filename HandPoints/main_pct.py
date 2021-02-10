@@ -13,7 +13,7 @@ from collections import OrderedDict
 
 from config.train_options import TrainOptions
 from model import create_model
-from model.pointnet import PointNetCls
+from model.pct import Pct
 from utils.visualizer import Visualizer
 from dataloader import create_dataset
 from IPython import embed
@@ -25,7 +25,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 from tensorboardX import SummaryWriter
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, CosineAnnealingLR
 import os
 
 args = TrainOptions().parse()  # get training argsions
@@ -49,7 +49,8 @@ args_test.isTrain = False
 test_loader = create_dataset(args_test)
 print("test data number is: ", len(test_loader.dataset))
 
-model = PointNetCls(num_points=512, input_chann=3, k=22)
+#model = PointNetCls(num_points=512, input_chann=3, k=22)
+model = Pct(output_channels=joint_size)
 
 if len(args.gpu_ids) > 0:
    torch.cuda.set_device(args.gpu_ids[0])
@@ -59,8 +60,10 @@ if len(args.gpu_ids) > 0:
 joint_upper_range = joint_upper_range.cuda()
 joint_lower_range = joint_lower_range.cuda()
 
-optimizer = optim.Adam(model.parameters(), lr=args.lr)
-scheduler = StepLR(optimizer, step_size=30, gamma=0.5)
+#optimizer = optim.Adam(model.parameters(), lr=args.lr)
+optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=1e-4)
+# scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
+scheduler = CosineAnnealingLR(optimizer, 300, eta_min=args.lr)
 
 
 def train(model, loader, epoch):
@@ -146,7 +149,7 @@ def test(model, loader):
 
 def main():
     if args.phase== 'train':
-        for epoch in range(args.epoch_count, 300 + 1):
+        for epoch in range(args.epoch_count, 400 + 1):
             acc_train_human, train_error_human = train(model, train_loader, epoch)
             print('Train done, acc_human={}, train_error_human={}'.format(
                 acc_train_human, train_error_human))

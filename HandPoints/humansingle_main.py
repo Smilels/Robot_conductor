@@ -63,8 +63,9 @@ if __name__ == '__main__':
                 if args.display_id > 0:
                     visualizer.plot_current_losses(epoch, float(epoch_iter) / len(dataset), losses)
                     idx = random.randint(0, args.batch_size-1)
-                    # visualizer.plot_pc(model.pc[idx].transpose(0,1), data[0][idx])
-                    visualizer.plot_pc(model.pc[idx], data[0][idx])
+                    # for pointnet, need transpose; for pointnet2, do not need transpose
+                    visualizer.plot_pc(model.pc[idx].transpose(0,1), data[0][idx])
+                    # visualizer.plot_pc(model.pc[idx], data[0][idx])
 
             if total_iters % args.save_latest_freq == 0:  # cache our latest model every <save_latest_freq> iterations
                 print('saving the latest model (epoch %d, total_iters %d)' % (epoch, total_iters))

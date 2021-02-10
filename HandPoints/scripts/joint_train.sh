@@ -15,9 +15,9 @@ NUM_POINTS=512
 DATE=`date '+%Y%m%d%H'`
 N_EPOCH=200
 NAME_BASE=${DATE}_${MODEL}_${NETG}${NGF}_bs${BS}lr${LR}ep${N_EPOCH}
-NAME='20k_step50'
+NAME='20k_step30'
 DISPLAY_ENV=${NAME_BASE}_${NAME}
-GPU_ID=3,4,5
+GPU_ID=0,1
 
 # command
 python ./main_pointnet.py \
@@ -33,5 +33,5 @@ python ./main_pointnet.py \
   --lr ${LR} \
   --dataset_mode 'joint' \
   --lr_policy 'step' \
-  --lr_decay_iters 50 \
+  --lr_decay_iters 30 \
 

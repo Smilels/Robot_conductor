@@ -12,7 +12,7 @@ from .base_model import BaseModel
 from IPython import embed
 
 
-class HumansingleModel(BaseModel):
+class PctModel(BaseModel):
     def __init__(self, opt):
         BaseModel.__init__(self, opt)
 
@@ -23,11 +23,12 @@ class HumansingleModel(BaseModel):
             self.model_names = ['G']
 
         self.joint_angles = None
-        self.netG = networks.define_G(opt.netG, opt.num_points, opt.norm, opt.init_type,
+        self.netG = networks.define_G(opt.netG, opt.norm, opt.init_type,
                                       opt.init_gain, self.gpu_ids)
         if self.isTrain:
             # initialize optimizers; schedulers will be automatically created by function <BaseModel.setup>.
-            self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+            #self.optimizer_G = torch.optim.Adam(self.netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+            self.optimizer_G = torch.optim.SGD(self.netG.parameters(), lr=opt.lr, momentum=0.9, weight_decay=1e-4)
             self.optimizers.append(self.optimizer_G)
             self.criterionL2 = torch.nn.MSELoss()
 
