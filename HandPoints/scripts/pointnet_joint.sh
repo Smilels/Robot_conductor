@@ -1,8 +1,6 @@
 set -ex
 
 # training parameters
-MODEL='humansingle'
-NETG='pointnet' # pointnet++
 NORM='batch'
 BS=128
 LR=0.0001
@@ -27,8 +25,6 @@ python ./main_pointnet.py \
   --name ${DISPLAY_ENV} \
   --display_env ${DISPLAY_ENV} \
   --batch_size ${BS} \
-  --model ${MODEL} \
-  --netG ${NETG} \
   --num_points ${NUM_POINTS} \
   --norm ${NORM} \
   --lr ${LR} \

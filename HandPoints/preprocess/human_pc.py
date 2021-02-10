@@ -32,9 +32,7 @@ if sys. argv[1] == "tams108":
 elif sys. argv[1] == "server":
     base_path = "/data/sli/Bighand2017/"
     img_path = base_path + "images/"
-    tf_path = os.path.join(base_path, "points_no_pca/human_pca_tf/")
-    pose_path = os.path.join(base_path, "human_pose/")
-    points_path = base_path + "points_no_pca/human_points/"
+    points_path = base_path + "points_keypoints/human_points/"
     show_bbx = 0
     gt_file = "groundtruth/Training_Annotation.txt"
 

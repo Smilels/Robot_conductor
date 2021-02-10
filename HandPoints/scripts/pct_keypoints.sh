@@ -1,14 +1,12 @@
 set -ex
 
 # training parameters
-MODEL='pct' # 'humansingle'
-NETG='pct' # pointnet++
 NORM='batch'
 BS=32
 LR=0.0001
 
 # dataset
-DATAROOT='../data/points_no_pca' # points_no_pca
+DATAROOT='../data/points_keypoints' # points_no_pca
 DATAMODE='keypoints' # joint
 NUM_POINTS=1024
 

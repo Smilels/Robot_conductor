@@ -1,8 +1,6 @@
 set -ex
 
 # training parameters
-MODEL='pct' # 'humansingle'
-NETG='pct' # pointnet++
 NORM='batch'
 BS=32
 LR=0.0001
