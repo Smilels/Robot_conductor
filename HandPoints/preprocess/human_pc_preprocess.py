@@ -19,7 +19,7 @@ from scipy.spatial.transform import Rotation as R
 
 save_norm = 0
 show_bbx = 1
-do_pca = 0
+do_pca = 1
 
 focalLengthX = 475.065948
 focalLengthY = 475.065857
@@ -28,7 +28,7 @@ centerY = 245.287079
 
 DOWN_SAMPLE_NUM = 2048
 FPS_SAMPLE_NUM = 1024
- 
+
 
 if sys. argv[1] == "tams108":
     base_path = "/homeL/shuang/ros_workspace/tele_ws/src/dataset/"
@@ -163,7 +163,8 @@ def get_human_points(line):
         world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[0, 0, 0])
 
-        o3d.visualization.draw_geometries([pcd_key, pcd_normalized], point_show_normal=False)
+        # o3d.visualization.draw_geometries([pcd_key, pcd_normalized], point_show_normal=False)
+        o3d.visualization.draw_geometries([pcd_hand, pcd_key, pcd_pca, pcd_fps_sample, world_frame_vis], point_show_normal=False)
 
     if not os.path.exists(points_path):
         os.makedirs(points_path)

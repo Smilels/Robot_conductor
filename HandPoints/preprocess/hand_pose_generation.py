@@ -181,18 +181,18 @@ class Map_Loader(object):
         return [rh_palm, rh_middle_pip, rh_tip_middle, rh_tf_pip_wrist]
 
 
-def show_line(un1, un2, color='g', scale_factor=1):
+def show_line(un1, un2, color='g', scale_factor=2):
     # for shadow and human scale_factor=1
-    if color == 'b':
+    if color == 'yellow':
+        color_f = (0.9, 0.9, 0.4) #0.3, 0.2,0.7
+    elif color == 'purple': # thumb purple
         color_f = (0.8, 0, 0.9)
-    elif color == 'r':
-        color_f = (0.3, 0.2,0.7)
-    elif color == 'p':
-        color_f = (0.1, 1, 0.8)
-    elif color == 'y':
-        color_f = (0.5, 1, 1)
-    elif color == 'g':
-        color_f = (1, 1, 0)
+    elif color == 'pink':
+        color_f = (0.95, 0.34, 0.55)
+    elif color == 'blue':
+        color_f = (0.27, 0.56,0.7)
+    elif color == 'brown':
+        color_f = (0.6, 0.6,0.2)
     elif isinstance(color, tuple):
         color_f = color
     else:
@@ -200,10 +200,10 @@ def show_line(un1, un2, color='g', scale_factor=1):
     mlab.plot3d([un1[0], un2[0]], [un1[1], un2[1]], [un1[2], un2[2]], color=color_f, tube_radius=scale_factor)
 
 
-def show_points(point, color='b', scale_factor=5):
+def show_points(point, color='b', scale_factor=10):
     # for shadow and human scale_factor=5
     if color == 'b':
-        color_f = (0, 0, 1)
+        color_f = (0, 1, 1)
     elif color == 'r':
         color_f = (1, 0, 0)
     elif color == 'g':
@@ -219,75 +219,75 @@ def show_points(point, color='b', scale_factor=5):
 def show_hand(points, type='human'):
     show_points(points)
     if type == "human":
-        show_line(points[0], points[1], color='r')
-        show_line(points[1], points[6], color='r')
-        show_line(points[7], points[6], color='r')
-        show_line(points[7], points[8], color='r')
+        show_line(points[0], points[1], color='brown')
+        show_line(points[1], points[6], color='brown')
+        show_line(points[7], points[6], color='brown')
+        show_line(points[7], points[8], color='brown')
 
-        show_line(points[0], points[2], color='y')
-        show_line(points[9], points[2], color='y')
-        show_line(points[9], points[10], color='y')
-        show_line(points[11], points[10], color='y')
+        show_line(points[0], points[2], color='brown')
+        show_line(points[9], points[2], color='brown')
+        show_line(points[9], points[10], color='brown')
+        show_line(points[11], points[10], color='brown')
 
-        show_line(points[0], points[3], color='g')
-        show_line(points[12], points[3], color='g')
-        show_line(points[12], points[13], color='g')
-        show_line(points[14], points[13], color='g')
+        show_line(points[0], points[3], color='brown')
+        show_line(points[12], points[3], color='brown')
+        show_line(points[12], points[13], color='brown')
+        show_line(points[14], points[13], color='brown')
 
-        show_line(points[0], points[4], color='b')
-        show_line(points[15], points[4], color='b')
-        show_line(points[15], points[16], color='b')
-        show_line(points[17], points[16], color='b')
+        show_line(points[0], points[4], color='brown')
+        show_line(points[15], points[4], color='brown')
+        show_line(points[15], points[16], color='brown')
+        show_line(points[17], points[16], color='brown')
 
-        show_line(points[0], points[5], color='p')
-        show_line(points[18], points[5], color='p')
-        show_line(points[18], points[19], color='p')
-        show_line(points[20], points[19], color='p')
+        show_line(points[0], points[5], color='brown')
+        show_line(points[18], points[5], color='brown')
+        show_line(points[18], points[19], color='brown')
+        show_line(points[20], points[19], color='brown')
     elif type == "shadow":
-        show_line(points[0], points[1], color='r')
-        show_line(points[1], points[6], color='r')
-        show_line(points[7], points[6], color='r')
-        show_line(points[7], points[8], color='r')
+        show_line(points[0], points[1], color='purple')
+        show_line(points[1], points[6], color='purple')
+        show_line(points[7], points[6], color='purple')
+        show_line(points[7], points[8], color='purple')
 
-        show_line(points[0], points[2], color='y')
-        show_line(points[9], points[2], color='y')
-        show_line(points[9], points[10], color='y')
-        show_line(points[11], points[10], color='y')
+        show_line(points[0], points[2], color='blue')
+        show_line(points[9], points[2], color='blue')
+        show_line(points[9], points[10], color='blue')
+        show_line(points[11], points[10], color='blue')
 
-        show_line(points[0], points[3], color='g')
-        show_line(points[12], points[3], color='g')
-        show_line(points[12], points[13], color='g')
-        show_line(points[14], points[13], color='g')
+        show_line(points[0], points[3], color='brown')
+        show_line(points[12], points[3], color='brown')
+        show_line(points[12], points[13], color='brown')
+        show_line(points[14], points[13], color='brown')
 
-        show_line(points[0], points[4], color='b')
-        show_line(points[15], points[4], color='b')
-        show_line(points[15], points[16], color='b')
-        show_line(points[17], points[16], color='b')
+        show_line(points[0], points[4], color='yellow')
+        show_line(points[15], points[4], color='yellow')
+        show_line(points[15], points[16], color='yellow')
+        show_line(points[17], points[16], color='yellow')
 
-        show_line(points[0], points[5], color='p')
-        show_line(points[18], points[5], color='p')
-        show_line(points[18], points[19], color='p')
-        show_line(points[20], points[19], color='p')
+        show_line(points[0], points[5], color='pink')
+        show_line(points[18], points[5], color='pink')
+        show_line(points[18], points[19], color='pink')
+        show_line(points[20], points[19], color='pink')
     else:
-        show_line(points[0], points[11], color='r')
-        show_line(points[11], points[6], color='r')
-        show_line(points[6], points[1], color='r')
+        show_line(points[0], points[11], color='purple')
+        show_line(points[11], points[6], color='purple')
+        show_line(points[6], points[1], color='purple')
 
-        show_line(points[0], points[12], color='y')
-        show_line(points[12], points[7], color='y')
-        show_line(points[7], points[2], color='y')
+        show_line(points[0], points[12], color='blue')
+        show_line(points[12], points[7], color='blue')
+        show_line(points[7], points[2], color='blue')
 
-        show_line(points[0], points[13], color='g')
-        show_line(points[13], points[8], color='g')
-        show_line(points[8], points[3], color='g')
+        show_line(points[0], points[13], color='brown')
+        show_line(points[13], points[8], color='brown')
+        show_line(points[8], points[3], color='brown')
 
-        show_line(points[0], points[14], color='b')
-        show_line(points[14], points[9], color='b')
-        show_line(points[9], points[4], color='b')
+        show_line(points[0], points[14], color='yellow')
+        show_line(points[14], points[9], color='yellow')
+        show_line(points[9], points[4], color='yellow')
 
-        show_line(points[0], points[15], color='p')
-        show_line(points[15], points[10], color='p')
-        show_line(points[10], points[5], color='p')
+        show_line(points[0], points[15], color='pink')
+        show_line(points[15], points[10], color='pink')
+        show_line(points[10], points[5], color='pink')
 
     tf_palm = points[1] - points[0]
     ff_palm = points[2] - points[0]
@@ -307,11 +307,11 @@ def show_hand(points, type='human'):
         wrist_x /= np.linalg.norm(wrist_x)
 
     mlab.quiver3d(points[0][0], points[0][1], points[0][2], wrist_x[0], wrist_x[1], wrist_x[2],
-                  scale_factor=50, line_width=0.5, color=(1, 0, 0), mode='arrow')
+                  scale_factor=150, line_width=0.2, color=(1, 0, 0), mode='arrow')
     mlab.quiver3d(points[0][0], points[0][1], points[0][2], wrist_y[0], wrist_y[1], wrist_y[2],
-                  scale_factor=50, line_width=0.5, color=(0, 1, 0), mode='arrow')
+                  scale_factor=150, line_width=0.2, color=(0, 1, 0), mode='arrow')
     mlab.quiver3d(points[0][0], points[0][1], points[0][2], wrist_z[0], wrist_z[1], wrist_z[2],
-                  scale_factor=50, line_width=0.5, color=(0, 0, 1), mode='arrow')
+                  scale_factor=150, line_width=0.2, color=(0, 0, 1), mode='arrow')
 
 
 def cartesian_pos_show(base_path):
@@ -330,13 +330,13 @@ def cartesian_pos_show(base_path):
 
 if __name__ == '__main__':
     batch_size = 1
-    base_path = "../dataloader/"
+    base_path = "../data/"
     # cartesian_pos_show(base_path)
     map_loader = Map_Loader(base_path)
     csvSum = open(base_path + "shadow_hand_mapping_pose_file.csv", "w")
     writer = csv.writer(csvSum)
 
-    for i in range(79, len(map_loader.framelist)):
+    for i in range(44, len(map_loader.framelist)):
         frame, tip_keys, pip_keys, pip_mcp, tip_pip, local_points,  shadow_points, wrist_pos, local_frame = map_loader.map(i)
         # save key
         result = np.hstack([frame, tip_keys[0], tip_keys[1],
@@ -347,9 +347,9 @@ if __name__ == '__main__':
         # writer.writerow(result)
 
         mlab.figure(bgcolor=(1, 1, 1), size=(1280, 960))
-        show_hand(shadow_points, 'shadow')
-        # show_hand(local_points, 'human')
-        # mlab.savefig(filename="../data/tams_handshape/" + frame)
+        # show_hand(shadow_points, 'shadow')
+        show_hand(local_points, 'human')
+        mlab.savefig(filename="../data/tams_handshape/" + frame)
         # mlab.close()
         mlab.show()
     csvSum.close()

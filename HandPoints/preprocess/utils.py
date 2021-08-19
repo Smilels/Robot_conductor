@@ -149,7 +149,7 @@ def show_paired_depth_images():
 
         com = np.hstack([img, human_img])
         n = cv2.normalize(com, com, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
-        cv2.imshow( file_list[i][:-4], n)
+        cv2.imshow(file_list[i][:-4], n)
         key = cv2.waitKey()
 
         if key == 27:    # Esc key to stop
@@ -240,6 +240,25 @@ def human_shadow_points_check2():
         world_frame_vis = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=150, origin=[0, 0, 0])
         o3d.visualization.draw_geometries([world_frame_vis, pcd_human, pcd_shadow])
+
+
+def human_shadow_points_check3():
+    base_path = "../data/points_keypoints"
+    points_lists = glob.glob(base_path+'human_points/*.npy')
+    points_lists.sort()
+
+    # spilt joint labels to train and test dataset
+    label = points_lists[:200000]
+    # label = shadow_consist
+    train_sample = int(len(label) * 0.9)
+    train = label[:train_sample]
+    print(train.shape)
+    test = label[train_sample:]
+    print(test.shape)
+    np.save('../data/points_keypoints/train_20k.npy', train)
+    np.save('../data/points_keypoints/test_20k.npy', test)
+
+
 
 
 if __name__ == "__main__":
